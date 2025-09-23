@@ -45,7 +45,7 @@ export default function CreateEventScreen() {
     setDateError(null); // Clear previous errors
 
     if (!title.trim()) {
-      Alert.alert('Error', 'Please enter an event title.');
+      setTitleError('Please enter an event title.');
       return;
     }
 
