@@ -71,7 +71,23 @@ export default function ManageEventScreen() {
   };
 
   const toggleCategoryStatus = async (categoryId: string, newStatus: 'open' | 'closed') => {
-    // ... (This function is correct and remains unchanged)
+    try {
+      const { error } = await supabase
+        .from('bet_categories')
+        .update({ status: newStatus })
+        .eq('id', categoryId);
+  
+      if (error) throw error;
+  
+      // After a successful update, just refresh the data.
+      // The UI change of the toggle is enough feedback for the user.
+      await loadEventData();
+  
+    } catch (error: any) {
+      console.error('Error updating category status:', error);
+      // Use a reliable alert for errors on all platforms.
+      alert(`Error: ${error.message || 'Failed to update betting status'}`);
+    }
   };
   
   const settleAction = async (categoryId: string, correctAnswer: string) => {
