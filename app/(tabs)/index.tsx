@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { Plus, Calendar, Users, TrendingUp } from 'lucide-react-native';
+import { Plus, Calendar, Users, TrendingUp, Trophy } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, Database } from '@/lib/supabase';
