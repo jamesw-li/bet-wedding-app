@@ -1,99 +1,97 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { router } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
 
+// Define the shape of the context
 type AuthContextType = {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  // We remove signIn and signUp from here as they are only used in the auth screen
 };
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  session: null,
-  loading: true,
-  signIn: async () => ({ error: null }),
-  signUp: async () => ({ error: null }),
-  signOut: async () => {},
-});
+// Create the context
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Custom hook to use the AuthContext
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+// Custom hook to manage the auth state and navigation
+function useAuthInitialState() {
   const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
+  const segments = useSegments();
+  const router = useRouter();
 
+  useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (isMounted) {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
     });
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (isMounted) {
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
       }
-    });
+    );
 
     return () => {
-      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
-  };
+  useEffect(() => {
+    // If loading is complete, handle routing
+    if (!loading) {
+      const inAuthGroup = segments[0] === 'auth';
 
-  const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    return { error };
-  };
+      if (user && inAuthGroup) {
+        // Redirect to the main app if the user is signed in and on the auth screen
+        router.replace('/(tabs)');
+      } else if (!user && !inAuthGroup) {
+        // Redirect to the auth screen if the user is not signed in and not on the auth screen
+        router.replace('/auth');
+      }
+    }
+  }, [user, loading, segments, router]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    router.replace('/auth');
+    // The useEffect above will handle the redirect automatically
   };
+  
+  // Note: We don't need to expose signIn and signUp here because they
+  // are called directly from the auth screen and don't affect global state
+  // in the same way. Keeping the context clean is good practice.
+
+  return {
+    user,
+    session,
+    loading,
+    signOut,
+  };
+}
+
+// The AuthProvider component
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const authState = useAuthInitialState();
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        session,
-        loading,
-        signIn,
-        signUp,
-        signOut,
-      }}
-    >
+    <AuthContext.Provider value={authState}>
       {children}
     </AuthContext.Provider>
   );
