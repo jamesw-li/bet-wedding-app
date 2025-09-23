@@ -41,6 +41,7 @@ export default function CreateEventScreen() {
   };
 
   const handleCreate = async () => {
+    setTitleError(null);
     setDateError(null); // Clear previous errors
 
     if (!title.trim()) {
