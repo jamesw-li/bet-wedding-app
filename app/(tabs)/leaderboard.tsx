@@ -34,7 +34,8 @@ export default function LeaderboardScreen() {
   });
   const [loading, setLoading] = useState(true);
 
-  const loadLeaderboard = async () => {
+
+      const loadLeaderboard = async () => {
   if (!user) return;
 
   try {
@@ -110,6 +111,7 @@ export default function LeaderboardScreen() {
     setLoading(false);
   }
 };
+      
       // Get user emails
       const userIds = Array.from(userPointsMap.keys());
       const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
