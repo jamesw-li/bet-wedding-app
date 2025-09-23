@@ -26,27 +26,36 @@ export default function EventsScreen() {
     if (!user) return;
 
     try {
+      // THE FIX: This is a more explicit and correct query.
+      // It specifically asks for events where the current user is a participant.
       const { data: eventsData, error } = await supabase
-        .from('events')
+        .from('event_participants')
         .select(`
-          *,
-          event_participants!inner(user_id),
-          event_participants(count)
+          events (
+            *,
+            event_participants (
+              count
+            )
+          )
         `)
-        .order('created_at', { ascending: false });
+        .eq('user_id', user.id);
 
       if (error) throw error;
+      
+      // Process the data, which is now nested
+      const processedEvents = eventsData?.map(item => {
+        const event = item.events as Event;
+        return {
+          ...event,
+          participant_count: Array.isArray(event.event_participants) 
+            ? event.event_participants[0]?.count || 0
+            : 0,
+          is_creator: event.creator_id === user.id,
+        };
+      }) || [];
 
-      // Process events data
-      const processedEvents = eventsData?.map(event => ({
-        ...event,
-        participant_count: Array.isArray(event.event_participants) 
-          ? event.event_participants.length 
-          : 0,
-        is_creator: event.creator_id === user.id,
-      })) || [];
+      setEvents(processedEvents.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
 
-      setEvents(processedEvents);
     } catch (error) {
       console.error('Error loading events:', error);
     } finally {
