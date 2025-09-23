@@ -97,13 +97,19 @@ export default function ManageEventScreen() {
         correct_answer_option: correctAnswer,
         creator_id_to_check: user!.id,
       });
+  
       if (error) throw error;
+  
+      // After a successful update, just refresh the data.
       await loadEventData();
-      alert('Success! Bets have been settled.');
+      
+      // The alert('Success!') line has been removed.
+  
     } catch (error: any) {
       console.error('Error settling bets:', error);
       Alert.alert('Error', error.message || 'Failed to settle bets');
     } finally {
+      // Reset the confirmation state
       setConfirmingSettle(null);
     }
   };
