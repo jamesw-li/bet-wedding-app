@@ -124,10 +124,11 @@ export default function ManageEventScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // THE FIX: Call the new database function with a single RPC call
+              // THE FIX: Call the updated database function and pass the user's ID
               const { error } = await supabase.rpc('settle_bet', {
                 category_id_to_settle: categoryId,
                 correct_answer_option: correctAnswer,
+                creator_id_to_check: user!.id, // Pass the user's ID for the security check
               });
   
               if (error) throw error;
@@ -139,12 +140,12 @@ export default function ManageEventScreen() {
               console.error('Error settling bets:', error);
               Alert.alert('Error', error.message || 'Failed to settle bets');
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
-
+  
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
