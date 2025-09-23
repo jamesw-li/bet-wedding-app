@@ -96,7 +96,7 @@ export default function LeaderboardScreen() {
       setGlobalLeaderboard(leaderboardEntries);
 
       // Find and set the stats for the currently logged-in user
-      const currentUserStats = leaderboardEntries.find(entry => entry.user_id === user.id);
+      const currentUserStatWWs = leaderboardEntries.find(entry => entry.user_id === user.id);
       if (currentUserStats) {
         setUserStats({
           rank: currentUserStats.rank,
