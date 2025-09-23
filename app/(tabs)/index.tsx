@@ -87,9 +87,11 @@ export default function HomeScreen() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
+      weekday: 'long',
+      month: 'long',
       day: 'numeric',
       year: 'numeric',
+      timeZone: 'UTC',
     });
   };
 
