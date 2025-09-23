@@ -120,7 +120,7 @@ export default function CreateEventScreen() {
             <TextInput style={styles.input} placeholder="e.g., Sarah & John's Wedding" value={title} onChangeText={setTitle} placeholderTextColor="#9CA3AF" />
           </View>
         </View>
-
+        {titleError && <Text style={styles.errorText}>{titleError}</Text>}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Wedding Date *</Text>
           {Platform.OS === 'web' ? (
