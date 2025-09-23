@@ -1,4 +1,4 @@
-import React, auseState } from 'react';
+import React, pauseState } from 'react';
 import {
   View,
   Text,
