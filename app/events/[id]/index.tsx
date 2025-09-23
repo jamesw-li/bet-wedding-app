@@ -31,54 +31,25 @@ export default function EventDetailScreen() {
   const [loading, setLoading] = useState(true);
 
   const loadEventData = async () => {
+    // ... (rest of the function is the same)
     if (!user || !id) return;
-
     try {
-      // Load event details
-      const { data: eventData, error: eventError } = await supabase
-        .from('events')
-        .select('*')
-        .eq('id', id)
-        .single();
-
+      const { data: eventData, error: eventError } = await supabase.from('events').select('*').eq('id', id).single();
       if (eventError) throw eventError;
       setEvent(eventData);
-
-      // Load bet categories
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('bet_categories')
-        .select('*')
-        .eq('event_id', id)
-        .order('created_at', { ascending: true });
-
+      const { data: categoriesData, error: categoriesError } = await supabase.from('bet_categories').select('*').eq('event_id', id).order('created_at', { ascending: true });
       if (categoriesError) throw categoriesError;
       setCategories(categoriesData || []);
-
-      // Load user's bets
-      const { data: betsData, error: betsError } = await supabase
-        .from('bets')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('event_id', id);
-
+      const { data: betsData, error: betsError } = await supabase.from('bets').select('*').eq('user_id', user.id).eq('event_id', id);
       if (betsError) throw betsError;
-      
       const betsMap = (betsData || []).reduce((acc, bet) => {
         acc[bet.category_id] = bet;
         return acc;
       }, {} as Record<string, Bet>);
       setUserBets(betsMap);
-
-      // Load participants
-      const { data: participantsData, error: participantsError } = await supabase
-        .from('event_participants')
-        .select('*')
-        .eq('event_id', id)
-        .order('total_points', { ascending: false });
-
+      const { data: participantsData, error: participantsError } = await supabase.from('event_participants').select('*').eq('event_id', id).order('total_points', { ascending: false });
       if (participantsError) throw participantsError;
       setParticipants(participantsData || []);
-
     } catch (error) {
       console.error('Error loading event data:', error);
       Alert.alert('Error', 'Failed to load event data');
@@ -97,35 +68,17 @@ export default function EventDetailScreen() {
   };
 
   const handlePlaceBet = async (categoryId: string, selectedOption: string) => {
-    if (!user || !event) return;
-
+    // ... (rest of the function is the same)
+     if (!user || !event) return;
     try {
       const existingBet = userBets[categoryId];
-      
       if (existingBet) {
-        // Update existing bet
-        const { error } = await supabase
-          .from('bets')
-          .update({ selected_option: selectedOption })
-          .eq('id', existingBet.id);
-
+        const { error } = await supabase.from('bets').update({ selected_option: selectedOption }).eq('id', existingBet.id);
         if (error) throw error;
       } else {
-        // Create new bet
-        const { error } = await supabase
-          .from('bets')
-          .insert([
-            {
-              user_id: user.id,
-              event_id: event.id,
-              category_id: categoryId,
-              selected_option: selectedOption,
-            },
-          ]);
-
+        const { error } = await supabase.from('bets').insert([{ user_id: user.id, event_id: event.id, category_id: categoryId, selected_option: selectedOption }]);
         if (error) throw error;
       }
-
       setShowBetModal(false);
       await loadEventData();
       Alert.alert('Success', 'Your bet has been placed!');
@@ -136,6 +89,7 @@ export default function EventDetailScreen() {
   };
 
   const openBetModal = (category: BetCategory) => {
+    // ... (rest of the function is the same)
     if (category.status !== 'open') {
       Alert.alert('Betting Closed', 'Betting is no longer available for this category.');
       return;
@@ -145,35 +99,33 @@ export default function EventDetailScreen() {
   };
 
   const shareEvent = () => {
-    Alert.alert(
-      'Share Event',
-      `Access Code: ${event?.access_code}\n\nShare this code with others so they can join the event!`
-    );
+    // ... (rest of the function is the same)
+    Alert.alert('Share Event', `Access Code: ${event?.access_code}\n\nShare this code with others so they can join the event!`);
   };
 
+  // THIS IS THE NEWLY ADDED FUNCTION WITH THE FIX
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      timeZone: 'UTC', // The crucial fix for the date being off-by-one
     });
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'open':
-        return '#10B981';
-      case 'closed':
-        return '#F59E0B';
-      case 'settled':
-        return '#6B7280';
-      default:
-        return '#6B7280';
+    // ... (rest of the function is the same)
+     switch (status) {
+      case 'open': return '#10B981';
+      case 'closed': return '#F59E0B';
+      case 'settled': return '#6B7280';
+      default: return '#6B7280';
     }
   };
 
   const getBetStatusText = (category: BetCategory) => {
+    // ... (rest of the function is the same)
     const userBet = userBets[category.id];
     if (category.status === 'settled') {
       if (userBet?.is_correct === true) {
@@ -190,6 +142,7 @@ export default function EventDetailScreen() {
   };
 
   if (!event) {
+    // ... (rest of the component is the same)
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>Loading event...</Text>
@@ -200,8 +153,8 @@ export default function EventDetailScreen() {
   const isCreator = event.creator_id === user?.id;
 
   return (
+    // ... The rest of the component and styles are the same
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={24} color="#1F2937" />
@@ -230,7 +183,6 @@ export default function EventDetailScreen() {
           <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#D4AF37']} />
         }
       >
-        {/* Event Info Card */}
         <View style={styles.eventCard}>
           <View style={styles.eventHeader}>
             <View style={styles.eventInfo}>
@@ -257,7 +209,6 @@ export default function EventDetailScreen() {
           )}
         </View>
 
-        {/* Top Participants */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Top Participants</Text>
           {participants.slice(0, 3).map((participant, index) => (
@@ -278,7 +229,6 @@ export default function EventDetailScreen() {
           ))}
         </View>
 
-        {/* Betting Categories */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Betting Categories</Text>
           
@@ -335,7 +285,6 @@ export default function EventDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Bet Modal */}
       <Modal
         visible={showBetModal}
         transparent
