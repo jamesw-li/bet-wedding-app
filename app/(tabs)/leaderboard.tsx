@@ -34,36 +34,72 @@ export default function LeaderboardScreen() {
   });
   const [loading, setLoading] = useState(true);
 
-  const loadLeaderboard = async () => {
-    if (!user) return;
+  // Replace the entire loadLeaderboard function in app/(tabs)/leaderboard.tsx
 
-    try {
-      // Get all participants with their points and user info
-      const { data: participantsData, error } = await supabase
-        .from('event_participants')
-        .select(`
-          user_id,
-          total_points,
-          events!inner(title)
-        `);
+const loadLeaderboard = async () => {
+  if (!user) return;
 
-      if (error) throw error;
+  try {
+    // A single, secure query to get participants and their public profiles
+    const { data: participantsData, error } = await supabase
+      .from('event_participants')
+      .select(`
+        user_id,
+        total_points,
+        profiles (
+          email
+        )
+      `);
 
-      // Aggregate points by user
-      const userPointsMap = new Map<string, { total_points: number; events_count: number }>();
-      
-      participantsData?.forEach(participant => {
-        const existing = userPointsMap.get(participant.user_id);
-        if (existing) {
-          existing.total_points += participant.total_points;
-          existing.events_count += 1;
-        } else {
-          userPointsMap.set(participant.user_id, {
-            total_points: participant.total_points,
-            events_count: 1,
-          });
-        }
+    if (error) throw error;
+
+    // Aggregate points by user
+    const userPointsMap = new Map<string, { total_points: number; events_count: number; email: string }>();
+
+    participantsData?.forEach(participant => {
+      const existing = userPointsMap.get(participant.user_id);
+      if (existing) {
+        existing.total_points += participant.total_points;
+        existing.events_count += 1;
+      } else {
+        // The 'profiles' object can be null if the user was created before the trigger was set up
+        const email = (participant.profiles as any)?.email || 'Unknown User';
+        userPointsMap.set(participant.user_id, {
+          total_points: participant.total_points,
+          events_count: 1,
+          email: email
+        });
+      }
+    });
+
+    // Create leaderboard entries from the aggregated map
+    const leaderboardEntries: LeaderboardEntry[] = Array.from(userPointsMap.entries())
+      .map(([userId, stats]) => ({
+        user_id: userId,
+        email: stats.email,
+        total_points: stats.total_points,
+        events_participated: stats.events_count,
+        rank: 0, // Will be set after sorting
+      }))
+      .sort((a, b) => b.total_points - a.total_points)
+      .map((entry, index) => ({ ...entry, rank: index + 1 }));
+
+    setGlobalLeaderboard(leaderboardEntries);
+
+    // Set user stats
+    const currentUserStats = leaderboardEntries.find(entry => entry.user_id === user.id);
+    if (currentUserStats) {
+      setUserStats({
+        rank: currentUserStats.rank,
+        total_points: currentUserStats.total_points,
+        events_participated: currentUserStats.events_participated,
       });
+    }
+  } catch (error) {
+    console.error('Error loading leaderboard:', error);
+  } finally {
+    setLoading(false);
+  }};
 
       // Get user emails
       const userIds = Array.from(userPointsMap.keys());
