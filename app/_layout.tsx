@@ -14,11 +14,14 @@ const RootLayoutNav = () => {
       return;
     }
 
+    // This now correctly checks if the current route is 'auth'
     const inAuthGroup = segments[0] === 'auth';
 
     if (!user && !inAuthGroup) {
+      // If not signed in, redirect to the 'auth' screen
       router.replace('/auth');
     } else if (user && inAuthGroup) {
+      // If signed in, redirect away from the auth screen to the main app
       router.replace('/(tabs)');
     }
   }, [user, loading, segments, router]);
@@ -33,8 +36,8 @@ const RootLayoutNav = () => {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      {/* These screens are now correctly recognized as layout groups */}
       <Stack.Screen name="(tabs)" />
+      {/* This now correctly points to the app/auth.tsx file */}
       <Stack.Screen name="auth" />
       <Stack.Screen name="+not-found" />
     </Stack>
