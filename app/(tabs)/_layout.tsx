@@ -1,9 +1,25 @@
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { Home, Calendar, Trophy, User } from 'lucide-react-native';
+import { useAuth } from '@/contexts/AuthContext';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
 
 export default function TabLayout() {
-  // No more loading or redirect logic is needed here.
-  // The root layout handles protecting this screen.
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#D4AF37" />
+      </View>
+    );
+  }
+
+  // This is the declarative guard. If the user is not logged in,
+  // it will always redirect to the auth screen.
+  if (!user) {
+    return <Redirect href="/auth" />;
+  }
+
   return (
     <Tabs
       screenOptions={{
@@ -59,3 +75,12 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+  },
+});
