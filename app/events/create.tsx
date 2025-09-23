@@ -154,3 +154,71 @@ export default function CreateEventScreen() {
         {showDatePicker && Platform.OS !== 'web' && (
           <DateTimePicker
             value={date}
+            mode="date"
+            display="default"
+            onChange={onDateChange}
+          />
+        )}
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Description (Optional)</Text>
+          <View style={[styles.inputContainer, styles.textareaContainer]}>
+            <FileText size={20} color="#6B7280" style={styles.textareaIcon} />
+            <TextInput
+              style={[styles.input, styles.textarea]}
+              placeholder="Add any special details about the wedding or betting rules..."
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+        </View>
+        
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>What happens next?</Text>
+          <Text style={styles.infoText}>
+            • Your event will get a unique access code{'\n'}
+            • Default betting categories will be created{'\n'}
+            • You can customize bets and manage participants{'\n'}
+            • Share the access code with your guests
+          </Text>
+        </View>
+        
+        <TouchableOpacity
+          style={[styles.createButton, loading && styles.createButtonDisabled]}
+          onPress={handleCreate}
+          disabled={loading}
+        >
+          <Text style={styles.createButtonText}>
+            {loading ? 'Creating Event...' : 'Create Event'}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+  backButton: { marginRight: 16, padding: 4 },
+  headerTitle: { fontSize: 20, fontWeight: '600', color: '#1F2937' },
+  content: { flex: 1, padding: 20 },
+  inputGroup: { marginBottom: 24 },
+  label: { fontSize: 16, fontWeight: '600', color: '#1F2937', marginBottom: 8 },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 16, borderWidth: 1, borderColor: '#F3F4F6', gap: 12 },
+  textareaContainer: { alignItems: 'flex-start', paddingTop: 16 },
+  textareaIcon: { marginTop: 2 },
+  input: { flex: 1, fontSize: 16, color: '#1F2937' },
+  textarea: { minHeight: 80, textAlignVertical: 'top' },
+  dateText: { fontSize: 16, color: '#1F2937' },
+  infoCard: { backgroundColor: '#EFF6FF', borderRadius: 12, padding: 16, marginBottom: 32, borderWidth: 1, borderColor: '#DBEAFE' },
+  infoTitle: { fontSize: 16, fontWeight: '600', color: '#1E40AF', marginBottom: 8 },
+  infoText: { fontSize: 14, color: '#1E40AF', lineHeight: 20 },
+  createButton: { backgroundColor: '#D4AF37', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginBottom: 40 },
+  createButtonDisabled: { backgroundColor: '#D1D5DB' },
+  createButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+});
