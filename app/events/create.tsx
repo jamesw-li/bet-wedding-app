@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -19,17 +19,12 @@ export default function CreateEventScreen() {
   const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  
-  // State for the native date picker on mobile
-  const [date, setDate] = useState(new Date()); 
-  
-  // State for the text input on web
+  const [date, setDate] = useState(new Date());
+  // FIX 1: Default the date string to blank
   const [dateString, setDateString] = useState(''); 
-
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Helper to format a Date object into a YYYY-MM-DD string
   const formatDateForSupabase = (d: Date) => {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -37,14 +32,6 @@ export default function CreateEventScreen() {
     return `${year}-${month}-${day}`;
   };
 
-  // Set initial date string for web on component mount
-  useEffect(() => {
-    if (Platform.OS === 'web') {
-      setDateString(formatDateForSupabase(new Date()));
-    }
-  }, []);
-
-  // Handler for the native date picker (mobile)
   const onDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
@@ -60,11 +47,12 @@ export default function CreateEventScreen() {
 
     let finalDate = '';
 
-    // THE FIX: Use different validation and data sources for web vs. mobile
     if (Platform.OS === 'web') {
+      // FIX 2: Re-add validation for the web text input
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(dateString)) {
-        Alert.alert('Invalid Date Format', 'Please enter the date in YYYY-MM-DD format.');
+        // Use Alert for web validation as it's a simple, effective UX
+        alert('Invalid Date Format: Please use YYYY-MM-DD.');
         return;
       }
       finalDate = dateString;
