@@ -36,6 +36,8 @@ export default function LeaderboardScreen() {
 
   // Replace the entire loadLeaderboard function in app/(tabs)/leaderboard.tsx
 
+// Replace the entire loadLeaderboard function in app/(tabs)/leaderboard.tsx
+
 const loadLeaderboard = async () => {
   if (!user) return;
 
@@ -99,7 +101,8 @@ const loadLeaderboard = async () => {
     console.error('Error loading leaderboard:', error);
   } finally {
     setLoading(false);
-  }};
+  }
+};
 
       // Get user emails
       const userIds = Array.from(userPointsMap.keys());
