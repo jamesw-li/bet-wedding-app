@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Heart, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { router } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 export default function AuthScreen() {
   const { signIn, signUp } = useAuth();
