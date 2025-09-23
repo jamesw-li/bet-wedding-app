@@ -20,10 +20,10 @@ export default function CreateEventScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date());
-  // FIX 1: Default the date string to blank
-  const [dateString, setDateString] = useState(''); 
+  const [dateString, setDateString] = useState(''); // FIX: Default is now blank
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [dateError, setDateError] = useState<string | null>(null); // State for inline error
 
   const formatDateForSupabase = (d: Date) => {
     const year = d.getFullYear();
@@ -40,6 +40,8 @@ export default function CreateEventScreen() {
   };
 
   const handleCreate = async () => {
+    setDateError(null); // Clear previous errors
+
     if (!title.trim()) {
       Alert.alert('Error', 'Please enter an event title.');
       return;
@@ -48,11 +50,10 @@ export default function CreateEventScreen() {
     let finalDate = '';
 
     if (Platform.OS === 'web') {
-      // FIX 2: Re-add validation for the web text input
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(dateString)) {
-        // Use Alert for web validation as it's a simple, effective UX
-        alert('Invalid Date Format: Please use YYYY-MM-DD.');
+        // FIX: Set the inline error message instead of using an alert
+        setDateError('Invalid Date Format: Please use YYYY-MM-DD.');
         return;
       }
       finalDate = dateString;
@@ -121,16 +122,23 @@ export default function CreateEventScreen() {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Wedding Date *</Text>
           {Platform.OS === 'web' ? (
-            <View style={styles.inputContainer}>
-              <Calendar size={20} color="#6B7280" />
-              <TextInput
-                style={styles.input}
-                placeholder="YYYY-MM-DD"
-                value={dateString}
-                onChangeText={setDateString}
-                placeholderTextColor="#9CA3AF"
-              />
-            </View>
+            <>
+              <View style={styles.inputContainer}>
+                <Calendar size={20} color="#6B7280" />
+                <TextInput
+                  style={styles.input}
+                  placeholder="YYYY-MM-DD"
+                  value={dateString}
+                  onChangeText={(text) => {
+                    setDateString(text);
+                    setDateError(null); // Clear error when user types
+                  }}
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+              {/* FIX: Conditionally render the error message */}
+              {dateError && <Text style={styles.errorText}>{dateError}</Text>}
+            </>
           ) : (
             <TouchableOpacity style={styles.inputContainer} onPress={() => setShowDatePicker(true)}>
               <Calendar size={20} color="#6B7280" />
@@ -209,4 +217,11 @@ const styles = StyleSheet.create({
   createButton: { backgroundColor: '#D4AF37', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginBottom: 40 },
   createButtonDisabled: { backgroundColor: '#D1D5DB' },
   createButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  // FIX: Add a style for the inline error text
+  errorText: {
+    color: '#EF4444',
+    fontSize: 14,
+    marginTop: 8,
+    marginLeft: 4,
+  },
 });
