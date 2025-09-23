@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { router } from 'expo-router';
 
-// Define the shape of the context
 type AuthContextType = {
   user: User | null;
   session: Session | null;
@@ -10,7 +10,6 @@ type AuthContextType = {
   signOut: () => Promise<void>;
 };
 
-// Create the context
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
@@ -18,26 +17,22 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
 });
 
-// Custom hook to use the AuthContext
 export const useAuth = () => {
   return useContext(AuthContext);
 };
 
-// The AuthProvider component
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
@@ -52,6 +47,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    // This is the imperative redirect. It fires immediately on sign out.
+    router.replace('/auth');
   };
 
   const value = {
