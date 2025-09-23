@@ -34,7 +34,7 @@ export default function LeaderboardScreen() {
   });
   const [loading, setLoading] = useState(true);
 
-      const loadLeaderboard = async () => {
+  const loadLeaderboard = async () => {
   if (!user) return;
 
   try {
