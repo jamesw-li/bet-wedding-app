@@ -24,6 +24,7 @@ export default function CreateEventScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [dateError, setDateError] = useState<string | null>(null); // State for inline error
+  const [titleError, setTitleError] = useState<string | null>(null);
 
   const formatDateForSupabase = (d: Date) => {
     const year = d.getFullYear();
