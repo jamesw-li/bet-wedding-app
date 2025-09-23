@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Platform, // 1. Import the Platform API
 } from 'react-native';
 import { LogOut, User, Mail, Calendar, Trophy, Settings } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,19 +14,26 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
 
+  // 2. Re-introduce the handler function with platform-specific logic
   const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Sign Out', 
-          style: 'destructive',
-          onPress: signOut 
-        },
-      ]
-    );
+    if (Platform.OS === 'web') {
+      // On the web, sign out immediately without a pop-up
+      signOut();
+    } else {
+      // On mobile (iOS/Android), show the confirmation pop-up
+      Alert.alert(
+        'Sign Out',
+        'Are you sure you want to sign out?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Sign Out', 
+            style: 'destructive',
+            onPress: signOut 
+          },
+        ]
+      );
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -117,6 +125,7 @@ export default function ProfileScreen() {
 
       {/* Sign Out */}
       <View style={styles.signOutContainer}>
+        {/* 3. Re-connect the button to the new handler function */}
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
           <LogOut size={24} color="#EF4444" />
           <Text style={styles.signOutText}>Sign Out</Text>
@@ -132,6 +141,7 @@ export default function ProfileScreen() {
   );
 }
 
+// Styles remain the same
 const styles = StyleSheet.create({
   container: {
     flex: 1,
