@@ -114,36 +114,48 @@ export default function ManageEventScreen() {
   };
 
   const settleBet = async (categoryId: string, correctAnswer: string) => {
-    Alert.alert(
-      'Settle Bets',
-      `Are you sure you want to settle this category with the answer: "${correctAnswer}"?\n\nThis action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Settle',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // THE FIX: Call the updated database function and pass the user's ID
-              const { error } = await supabase.rpc('settle_bet', {
-                category_id_to_settle: categoryId,
-                correct_answer_option: correctAnswer,
-                creator_id_to_check: user!.id, // Pass the user's ID for the security check
-              });
+    const settleAction = async () => {
+      try {
+        // This is the core logic that calls the database function
+        const { error } = await supabase.rpc('settle_bet', {
+          category_id_to_settle: categoryId,
+          correct_answer_option: correctAnswer,
+          creator_id_to_check: user!.id,
+        });
   
-              if (error) throw error;
+        if (error) throw error;
   
-              await loadEventData();
-              Alert.alert('Success', 'Bets have been settled successfully!');
+        await loadEventData();
+        // Use a simple, reliable alert for success on all platforms
+        alert('Success! Bets have been settled.'); 
   
-            } catch (error: any) {
-              console.error('Error settling bets:', error);
-              Alert.alert('Error', error.message || 'Failed to settle bets');
-            }
+      } catch (error: any) {
+        console.error('Error settling bets:', error);
+        Alert.alert('Error', error.message || 'Failed to settle bets');
+      }
+    };
+  
+    // THE FIX: Conditionally show the confirmation pop-up
+    if (Platform.OS === 'web') {
+      // On web, ask for confirmation with a simple browser confirm dialog
+      if (confirm(`Are you sure you want to settle with the answer: "${correctAnswer}"? This cannot be undone.`)) {
+        settleAction();
+      }
+    } else {
+      // On mobile, use the native Alert component
+      Alert.alert(
+        'Settle Bets',
+        `Are you sure you want to settle this category with the answer: "${correctAnswer}"?\n\nThis action cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Settle',
+            style: 'destructive',
+            onPress: settleAction,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
   
   const formatDate = (dateString: string) => {
