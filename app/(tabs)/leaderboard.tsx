@@ -34,61 +34,66 @@ export default function LeaderboardScreen() {
   });
   const [loading, setLoading] = useState(true);
 
-  // Replace the entire loadLeaderboard function in app/(tabs)/leaderboard.tsx
-
-// Replace the entire loadLeaderboard function in app/(tabs)/leaderboard.tsx
-
-const loadLeaderboard = async () => {
+      const loadLeaderboard = async () => {
   if (!user) return;
 
   try {
-    // A single, secure query to get participants and their public profiles
-    const { data: participantsData, error } = await supabase
+    // Step 1: Get all participant data from all events
+    const { data: participantsData, error: participantsError } = await supabase
       .from('event_participants')
-      .select(`
-        user_id,
-        total_points,
-        profiles (
-          email
-        )
-      `);
+      .select('user_id, total_points');
 
-    if (error) throw error;
+    if (participantsError) throw participantsError;
 
-    // Aggregate points by user
-    const userPointsMap = new Map<string, { total_points: number; events_count: number; email: string }>();
-
-    participantsData?.forEach(participant => {
-      const existing = userPointsMap.get(participant.user_id);
+    // Step 2: Aggregate the points and event counts for each user
+    const userStatsMap = new Map<string, { total_points: number; events_count: number }>();
+    participantsData?.forEach(p => {
+      const existing = userStatsMap.get(p.user_id);
       if (existing) {
-        existing.total_points += participant.total_points;
+        existing.total_points += p.total_points;
         existing.events_count += 1;
       } else {
-        // The 'profiles' object can be null if the user was created before the trigger was set up
-        const email = (participant.profiles as any)?.email || 'Unknown User';
-        userPointsMap.set(participant.user_id, {
-          total_points: participant.total_points,
+        userStatsMap.set(p.user_id, {
+          total_points: p.total_points,
           events_count: 1,
-          email: email
         });
       }
     });
 
-    // Create leaderboard entries from the aggregated map
-    const leaderboardEntries: LeaderboardEntry[] = Array.from(userPointsMap.entries())
+    if (userStatsMap.size === 0) {
+      setLoading(false);
+      return;
+    }
+
+    // Step 3: Fetch the public profiles for the users who have participated in events
+    const userIds = Array.from(userStatsMap.keys());
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, email')
+      .in('id', userIds);
+
+    if (profilesError) throw profilesError;
+
+    const emailMap = new Map<string, string>();
+    profilesData?.forEach(p => {
+      if (p.email) emailMap.set(p.id, p.email);
+    });
+
+    // Step 4: Combine the stats and profile data to build the final leaderboard
+    const leaderboardEntries: LeaderboardEntry[] = Array.from(userStatsMap.entries())
       .map(([userId, stats]) => ({
         user_id: userId,
-        email: stats.email,
+        email: emailMap.get(userId) || 'Unknown User',
         total_points: stats.total_points,
         events_participated: stats.events_count,
-        rank: 0, // Will be set after sorting
+        rank: 0,
       }))
       .sort((a, b) => b.total_points - a.total_points)
       .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
     setGlobalLeaderboard(leaderboardEntries);
 
-    // Set user stats
+    // Find and set the stats for the currently logged-in user
     const currentUserStats = leaderboardEntries.find(entry => entry.user_id === user.id);
     if (currentUserStats) {
       setUserStats({
@@ -97,13 +102,14 @@ const loadLeaderboard = async () => {
         events_participated: currentUserStats.events_participated,
       });
     }
+
   } catch (error) {
     console.error('Error loading leaderboard:', error);
+    Alert.alert('Error', 'Failed to load leaderboard data.');
   } finally {
     setLoading(false);
   }
 };
-
       // Get user emails
       const userIds = Array.from(userPointsMap.keys());
       const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
