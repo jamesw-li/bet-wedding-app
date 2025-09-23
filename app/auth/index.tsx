@@ -13,7 +13,8 @@ import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
 export default function AuthScreen() {
-  const { signIn, signUp } = useAuth();
+  const signIn = (email: string, password: string) => supabase.auth.signInWithPassword({ email, password });
+  const signUp = (email: string, password: string) => supabase.auth.signUp({ email, password });
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
