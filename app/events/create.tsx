@@ -1,4 +1,4 @@
-import React, pauseState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -20,11 +20,10 @@ export default function CreateEventScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date());
-  const [dateString, setDateString] = useState(''); // For web text input
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Helper to format a Date object into a YYYY-MM-DD string
+  // Helper to format a Date object into a YYYY-MM-DD string for Supabase
   const formatDateForSupabase = (d: Date) => {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -32,11 +31,17 @@ export default function CreateEventScreen() {
     return `${year}-${month}-${day}`;
   };
 
-  // Handler for the native date picker (mobile)
+  // Updated handler to work for both mobile and web's inline picker
   const onDateChange = (event: any, selectedDate?: Date) => {
-    const currentDate = selectedDate || date;
+    // On Android, the picker is dismissed automatically. On iOS, we need to hide it.
+    // On Web, we hide it manually after a date is selected.
     setShowDatePicker(Platform.OS === 'ios');
-    setDate(currentDate);
+    if (selectedDate) {
+      setDate(selectedDate);
+      if (Platform.OS === 'web') {
+        setShowDatePicker(false); // Hide the inline calendar after selection on web
+      }
+    }
   };
 
   const handleCreate = async () => {
@@ -45,21 +50,8 @@ export default function CreateEventScreen() {
       return;
     }
 
-    let finalDate = '';
-    if (Platform.OS === 'web') {
-      // On web, validate the text input
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(dateString)) {
-        Alert.alert('Error', 'Please enter the date in YYYY-MM-DD format.');
-        return;
-      }
-      finalDate = dateString;
-    } else {
-      // On mobile, format the date from the state
-      finalDate = formatDateForSupabase(date);
-    }
-
     setLoading(true);
+    const formattedDate = formatDateForSupabase(date);
 
     try {
       const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -69,7 +61,7 @@ export default function CreateEventScreen() {
         .insert([{
             title: title.trim(),
             description: description.trim() || null,
-            date: finalDate,
+            date: formattedDate,
             creator_id: user!.id,
             access_code: accessCode,
         }])
@@ -119,32 +111,18 @@ export default function CreateEventScreen() {
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Wedding Date *</Text>
-          {Platform.OS === 'web' ? (
-            // On WEB, show a text input
-            <View style={styles.inputContainer}>
-              <Calendar size={20} color="#6B7280" />
-              <TextInput
-                style={styles.input}
-                placeholder="YYYY-MM-DD"
-                value={dateString}
-                onChangeText={setDateString}
-                placeholderTextColor="#9CA3AF"
-              />
-            </View>
-          ) : (
-            // On MOBILE, show the button to open the picker
-            <TouchableOpacity style={styles.inputContainer} onPress={() => setShowDatePicker(true)}>
-              <Calendar size={20} color="#6B7280" />
-              <Text style={styles.dateText}>{date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity style={styles.inputContainer} onPress={() => setShowDatePicker(true)}>
+            <Calendar size={20} color="#6B7280" />
+            <Text style={styles.dateText}>{date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })}</Text>
+          </TouchableOpacity>
         </View>
 
-        {showDatePicker && Platform.OS !== 'web' && (
+        {showDatePicker && (
           <DateTimePicker
             value={date}
             mode="date"
-            display="default"
+            // THE FIX: Use a different display style for web vs. mobile
+            display={Platform.OS === 'web' ? 'inline' : 'default'}
             onChange={onDateChange}
           />
         )}
