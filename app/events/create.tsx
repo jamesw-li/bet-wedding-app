@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, auseState } from 'react';
 import {
   View,
   Text,
@@ -19,22 +19,12 @@ export default function CreateEventScreen() {
   const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(new Date()); // 1. Default date to today
-  const [showDatePicker, setShowDatePicker] = useState(false); // 2. State to show/hide the picker
+  const [date, setDate] = useState(new Date());
+  const [dateString, setDateString] = useState(''); // For web text input
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const generateAccessCode = () => {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
-  };
-
-  // 3. Handler for when a date is selected
-  const onDateChange = (event: any, selectedDate?: Date) => {
-    const currentDate = selectedDate || date;
-    setShowDatePicker(Platform.OS === 'ios'); // On iOS, the picker is a modal
-    setDate(currentDate);
-  };
-
-  // Helper to format the date correctly for Supabase (YYYY-MM-DD)
+  // Helper to format a Date object into a YYYY-MM-DD string
   const formatDateForSupabase = (d: Date) => {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -42,24 +32,44 @@ export default function CreateEventScreen() {
     return `${year}-${month}-${day}`;
   };
 
+  // Handler for the native date picker (mobile)
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    const currentDate = selectedDate || date;
+    setShowDatePicker(Platform.OS === 'ios');
+    setDate(currentDate);
+  };
+
   const handleCreate = async () => {
     if (!title.trim()) {
-      Alert.alert('Error', 'Please fill in the event title');
+      Alert.alert('Error', 'Please enter an event title.');
       return;
+    }
+
+    let finalDate = '';
+    if (Platform.OS === 'web') {
+      // On web, validate the text input
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(dateString)) {
+        Alert.alert('Error', 'Please enter the date in YYYY-MM-DD format.');
+        return;
+      }
+      finalDate = dateString;
+    } else {
+      // On mobile, format the date from the state
+      finalDate = formatDateForSupabase(date);
     }
 
     setLoading(true);
 
     try {
-      const accessCode = generateAccessCode();
-      const formattedDate = formatDateForSupabase(date); // Use the formatted date
+      const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       
       const { data, error: eventError } = await supabase
         .from('events')
         .insert([{
             title: title.trim(),
             description: description.trim() || null,
-            date: formattedDate, // Send the correct format to the database
+            date: finalDate,
             creator_id: user!.id,
             access_code: accessCode,
         }])
@@ -68,7 +78,6 @@ export default function CreateEventScreen() {
 
       if (eventError) throw eventError;
       
-      // ... (The rest of the handleCreate function remains the same)
       const newEventId = data.id;
       await supabase.from('event_participants').insert([{ event_id: newEventId, user_id: user!.id }]);
       const defaultCategories = [
@@ -108,17 +117,30 @@ export default function CreateEventScreen() {
           </View>
         </View>
 
-        {/* 4. Replace the old TextInput with a button to show the date picker */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Wedding Date *</Text>
-          <TouchableOpacity style={styles.inputContainer} onPress={() => setShowDatePicker(true)}>
-            <Calendar size={20} color="#6B7280" />
-            <Text style={styles.dateText}>{date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
-          </TouchableOpacity>
+          {Platform.OS === 'web' ? (
+            // On WEB, show a text input
+            <View style={styles.inputContainer}>
+              <Calendar size={20} color="#6B7280" />
+              <TextInput
+                style={styles.input}
+                placeholder="YYYY-MM-DD"
+                value={dateString}
+                onChangeText={setDateString}
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+          ) : (
+            // On MOBILE, show the button to open the picker
+            <TouchableOpacity style={styles.inputContainer} onPress={() => setShowDatePicker(true)}>
+              <Calendar size={20} color="#6B7280" />
+              <Text style={styles.dateText}>{date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* 5. Conditionally render the DateTimePicker component */}
-        {showDatePicker && (
+        {showDatePicker && Platform.OS !== 'web' && (
           <DateTimePicker
             value={date}
             mode="date"
@@ -168,9 +190,7 @@ export default function CreateEventScreen() {
   );
 }
 
-// 6. Add the new 'dateText' style
 const styles = StyleSheet.create({
-  // ... (all other styles remain the same)
   container: { flex: 1, backgroundColor: '#F8F9FA' },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
   backButton: { marginRight: 16, padding: 4 },
@@ -183,10 +203,7 @@ const styles = StyleSheet.create({
   textareaIcon: { marginTop: 2 },
   input: { flex: 1, fontSize: 16, color: '#1F2937' },
   textarea: { minHeight: 80, textAlignVertical: 'top' },
-  dateText: {
-    fontSize: 16,
-    color: '#1F2937',
-  },
+  dateText: { fontSize: 16, color: '#1F2937' },
   infoCard: { backgroundColor: '#EFF6FF', borderRadius: 12, padding: 16, marginBottom: 32, borderWidth: 1, borderColor: '#DBEAFE' },
   infoTitle: { fontSize: 16, fontWeight: '600', color: '#1E40AF', marginBottom: 8 },
   infoText: { fontSize: 14, color: '#1E40AF', lineHeight: 20 },
