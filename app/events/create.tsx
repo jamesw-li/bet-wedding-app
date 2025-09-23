@@ -7,7 +7,7 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
-  Platform, // Import Platform
+  Platform,
 } from 'react-native';
 import { ArrowLeft, Calendar, Type, FileText } from 'lucide-react-native';
 import { router } from 'expo-router';
@@ -27,6 +27,7 @@ export default function CreateEventScreen() {
 
   const handleCreate = async () => {
     if (!title.trim() || !date.trim()) {
+      // Use Alert here for validation errors as it's okay on web for this purpose
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
@@ -42,46 +43,85 @@ export default function CreateEventScreen() {
     try {
       const accessCode = generateAccessCode();
       
-      const { data, error } = await supabase
+      // Step 1: Create the event
+      const { data, error: eventError } = await supabase
         .from('events')
-        .insert([{
+        .insert([
+          {
             title: title.trim(),
             description: description.trim() || null,
             date,
             creator_id: user!.id,
             access_code: accessCode,
-        }])
+          },
+        ])
         .select()
         .single();
 
-      if (error) throw error;
+      if (eventError) throw eventError;
 
-      await supabase
+      const newEventId = data.id;
+
+      // Step 2: Add the creator as a participant
+      const { error: participantError } = await supabase
         .from('event_participants')
-        .insert([{ event_id: data.id, user_id: user!.id }]);
+        .insert([
+          {
+            event_id: newEventId,
+            user_id: user!.id,
+          },
+        ]);
 
+      if (participantError) throw participantError;
+
+      // Step 3: Define and insert the default betting categories (RESTORED)
       const defaultCategories = [
-        // ... (default categories remain the same)
+        {
+          title: 'First Dance Song',
+          description: "What will be the couple's first dance song?",
+          options: ['A Love Song', 'Classic Rock', 'Pop Hit', 'Country Song', 'Other'],
+          points: 10,
+        },
+        {
+          title: 'Who Will Cry First?',
+          description: 'Who will be the first to shed tears during the ceremony?',
+          options: ['Bride', 'Groom', 'Mother of Bride', 'Mother of Groom', 'Someone Else'],
+          points: 15,
+        },
+        {
+          title: 'Bouquet Catch',
+          description: 'Who will catch the bouquet?',
+          options: ['Single Friend', 'Married Friend', 'Family Member', 'Child', 'No One'],
+          points: 20,
+        },
+        {
+          title: 'Speech Duration',
+          description: "How long will the best man's speech be?",
+          options: ['Under 2 minutes', '2-5 minutes', '5-10 minutes', 'Over 10 minutes'],
+          points: 10,
+        },
+        {
+          title: 'Wedding Crasher',
+          description: 'Will there be any unexpected guests?',
+          options: ['Yes', 'No'],
+          points: 25,
+        },
       ];
 
       const categoriesWithEventId = defaultCategories.map(cat => ({
         ...cat,
-        event_id: data.id,
+        event_id: newEventId,
       }));
 
-      await supabase.from('bet_categories').insert(categoriesWithEventId);
+      const { error: categoriesError } = await supabase
+        .from('bet_categories')
+        .insert(categoriesWithEventId);
 
-      // THE FIX: Platform-specific redirect
-      if (Platform.OS === 'web') {
-        alert(`Event created successfully! Your access code is: ${accessCode}`);
-        router.replace(`/events/${data.id}`);
-      } else {
-        Alert.alert(
-          'Success!',
-          `Event created successfully! Your access code is: ${accessCode}`,
-          [{ text: 'OK', onPress: () => router.replace(`/events/${data.id}`) }]
-        );
-      }
+      if (categoriesError) throw categoriesError;
+
+      // Step 4: Redirect immediately to the new event's page (REMOVED POP-UP)
+      router.replace(`/events/${newEventId}`);
+
     } catch (error: any) {
       console.error('Error creating event:', error);
       Alert.alert('Error', error.message || 'Failed to create event');
@@ -90,7 +130,6 @@ export default function CreateEventScreen() {
     }
   };
 
-  // ... The rest of the component and styles remain the same
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -100,7 +139,6 @@ export default function CreateEventScreen() {
         <Text style={styles.headerTitle}>Create Event</Text>
       </View>
       <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
-        {/* Inputs and other UI elements */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Event Title *</Text>
           <View style={styles.inputContainer}>
@@ -166,8 +204,9 @@ export default function CreateEventScreen() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
-    container: {
+  container: {
     flex: 1,
     backgroundColor: '#F8F9FA',
   },
