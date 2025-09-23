@@ -13,28 +13,38 @@ import { ArrowLeft, Calendar, Type, FileText } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function CreateEventScreen() {
   const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState(new Date()); // 1. Default date to today
+  const [showDatePicker, setShowDatePicker] = useState(false); // 2. State to show/hide the picker
   const [loading, setLoading] = useState(false);
 
   const generateAccessCode = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   };
 
-  const handleCreate = async () => {
-    if (!title.trim() || !date.trim()) {
-      // Use Alert here for validation errors as it's okay on web for this purpose
-      Alert.alert('Error', 'Please fill in all required fields');
-      return;
-    }
+  // 3. Handler for when a date is selected
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    const currentDate = selectedDate || date;
+    setShowDatePicker(Platform.OS === 'ios'); // On iOS, the picker is a modal
+    setDate(currentDate);
+  };
 
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(date)) {
-      Alert.alert('Error', 'Please enter date in YYYY-MM-DD format');
+  // Helper to format the date correctly for Supabase (YYYY-MM-DD)
+  const formatDateForSupabase = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const handleCreate = async () => {
+    if (!title.trim()) {
+      Alert.alert('Error', 'Please fill in the event title');
       return;
     }
 
@@ -42,84 +52,35 @@ export default function CreateEventScreen() {
 
     try {
       const accessCode = generateAccessCode();
+      const formattedDate = formatDateForSupabase(date); // Use the formatted date
       
-      // Step 1: Create the event
       const { data, error: eventError } = await supabase
         .from('events')
-        .insert([
-          {
+        .insert([{
             title: title.trim(),
             description: description.trim() || null,
-            date,
+            date: formattedDate, // Send the correct format to the database
             creator_id: user!.id,
             access_code: accessCode,
-          },
-        ])
+        }])
         .select()
         .single();
 
       if (eventError) throw eventError;
-
+      
+      // ... (The rest of the handleCreate function remains the same)
       const newEventId = data.id;
-
-      // Step 2: Add the creator as a participant
-      const { error: participantError } = await supabase
-        .from('event_participants')
-        .insert([
-          {
-            event_id: newEventId,
-            user_id: user!.id,
-          },
-        ]);
-
-      if (participantError) throw participantError;
-
-      // Step 3: Define and insert the default betting categories (RESTORED)
+      await supabase.from('event_participants').insert([{ event_id: newEventId, user_id: user!.id }]);
       const defaultCategories = [
-        {
-          title: 'First Dance Song',
-          description: "What will be the couple's first dance song?",
-          options: ['A Love Song', 'Classic Rock', 'Pop Hit', 'Country Song', 'Other'],
-          points: 10,
-        },
-        {
-          title: 'Who Will Cry First?',
-          description: 'Who will be the first to shed tears during the ceremony?',
-          options: ['Bride', 'Groom', 'Mother of Bride', 'Mother of Groom', 'Someone Else'],
-          points: 15,
-        },
-        {
-          title: 'Bouquet Catch',
-          description: 'Who will catch the bouquet?',
-          options: ['Single Friend', 'Married Friend', 'Family Member', 'Child', 'No One'],
-          points: 20,
-        },
-        {
-          title: 'Speech Duration',
-          description: "How long will the best man's speech be?",
-          options: ['Under 2 minutes', '2-5 minutes', '5-10 minutes', 'Over 10 minutes'],
-          points: 10,
-        },
-        {
-          title: 'Wedding Crasher',
-          description: 'Will there be any unexpected guests?',
-          options: ['Yes', 'No'],
-          points: 25,
-        },
+        { title: 'First Dance Song', description: "What will be the couple's first dance song?", options: ['A Love Song', 'Classic Rock', 'Pop Hit', 'Country Song', 'Other'], points: 10 },
+        { title: 'Who Will Cry First?', description: 'Who will be the first to shed tears during the ceremony?', options: ['Bride', 'Groom', 'Mother of Bride', 'Mother of Groom', 'Someone Else'], points: 15 },
+        { title: 'Bouquet Catch', description: 'Who will catch the bouquet?', options: ['Single Friend', 'Married Friend', 'Family Member', 'Child', 'No One'], points: 20 },
+        { title: 'Speech Duration', description: "How long will the best man's speech be?", options: ['Under 2 minutes', '2-5 minutes', '5-10 minutes', 'Over 10 minutes'], points: 10 },
+        { title: 'Wedding Crasher', description: 'Will there be any unexpected guests?', options: ['Yes', 'No'], points: 25 },
       ];
-
-      const categoriesWithEventId = defaultCategories.map(cat => ({
-        ...cat,
-        event_id: newEventId,
-      }));
-
-      const { error: categoriesError } = await supabase
-        .from('bet_categories')
-        .insert(categoriesWithEventId);
-
-      if (categoriesError) throw categoriesError;
-
-      // Step 4: Redirect immediately to the new event's page (REMOVED POP-UP)
+      const categoriesWithEventId = defaultCategories.map(cat => ({ ...cat, event_id: newEventId }));
+      await supabase.from('bet_categories').insert(categoriesWithEventId);
+      
       router.replace(`/events/${newEventId}`);
 
     } catch (error: any) {
@@ -143,29 +104,29 @@ export default function CreateEventScreen() {
           <Text style={styles.label}>Event Title *</Text>
           <View style={styles.inputContainer}>
             <Type size={20} color="#6B7280" />
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., Sarah & John's Wedding"
-              value={title}
-              onChangeText={setTitle}
-              placeholderTextColor="#9CA3AF"
-            />
+            <TextInput style={styles.input} placeholder="e.g., Sarah & John's Wedding" value={title} onChangeText={setTitle} placeholderTextColor="#9CA3AF" />
           </View>
         </View>
+
+        {/* 4. Replace the old TextInput with a button to show the date picker */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Wedding Date *</Text>
-          <View style={styles.inputContainer}>
+          <TouchableOpacity style={styles.inputContainer} onPress={() => setShowDatePicker(true)}>
             <Calendar size={20} color="#6B7280" />
-            <TextInput
-              style={styles.input}
-              placeholder="YYYY-MM-DD (e.g., 2025-06-15)"
-              value={date}
-              onChangeText={setDate}
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
-          <Text style={styles.helperText}>Enter the date in YYYY-MM-DD format</Text>
+            <Text style={styles.dateText}>{date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
+          </TouchableOpacity>
         </View>
+
+        {/* 5. Conditionally render the DateTimePicker component */}
+        {showDatePicker && (
+          <DateTimePicker
+            value={date}
+            mode="date"
+            display="default"
+            onChange={onDateChange}
+          />
+        )}
+
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Description (Optional)</Text>
           <View style={[styles.inputContainer, styles.textareaContainer]}>
@@ -182,6 +143,7 @@ export default function CreateEventScreen() {
             />
           </View>
         </View>
+        
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>What happens next?</Text>
           <Text style={styles.infoText}>
@@ -191,6 +153,7 @@ export default function CreateEventScreen() {
             • Share the access code with your guests
           </Text>
         </View>
+        
         <TouchableOpacity
           style={[styles.createButton, loading && styles.createButtonDisabled]}
           onPress={handleCreate}
@@ -205,108 +168,29 @@ export default function CreateEventScreen() {
   );
 }
 
+// 6. Add the new 'dateText' style
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  backButton: {
-    marginRight: 16,
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-  inputGroup: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 8,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-    gap: 12,
-  },
-  textareaContainer: {
-    alignItems: 'flex-start',
-    paddingTop: 16,
-  },
-  textareaIcon: {
-    marginTop: 2,
-  },
-  input: {
-    flex: 1,
+  // ... (all other styles remain the same)
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+  backButton: { marginRight: 16, padding: 4 },
+  headerTitle: { fontSize: 20, fontWeight: '600', color: '#1F2937' },
+  content: { flex: 1, padding: 20 },
+  inputGroup: { marginBottom: 24 },
+  label: { fontSize: 16, fontWeight: '600', color: '#1F2937', marginBottom: 8 },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 16, borderWidth: 1, borderColor: '#F3F4F6', gap: 12 },
+  textareaContainer: { alignItems: 'flex-start', paddingTop: 16 },
+  textareaIcon: { marginTop: 2 },
+  input: { flex: 1, fontSize: 16, color: '#1F2937' },
+  textarea: { minHeight: 80, textAlignVertical: 'top' },
+  dateText: {
     fontSize: 16,
     color: '#1F2937',
   },
-  textarea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  helperText: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 6,
-    marginLeft: 4,
-  },
-  infoCard: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 32,
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E40AF',
-    marginBottom: 8,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#1E40AF',
-    lineHeight: 20,
-  },
-  createButton: {
-    backgroundColor: '#D4AF37',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  createButtonDisabled: {
-    backgroundColor: '#D1D5DB',
-  },
-  createButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  infoCard: { backgroundColor: '#EFF6FF', borderRadius: 12, padding: 16, marginBottom: 32, borderWidth: 1, borderColor: '#DBEAFE' },
+  infoTitle: { fontSize: 16, fontWeight: '600', color: '#1E40AF', marginBottom: 8 },
+  infoText: { fontSize: 14, color: '#1E40AF', lineHeight: 20 },
+  createButton: { backgroundColor: '#D4AF37', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginBottom: 40 },
+  createButtonDisabled: { backgroundColor: '#D1D5DB' },
+  createButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
 });
