@@ -1,21 +1,19 @@
-import { Tabs, Redirect } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { Home, Calendar, Trophy, User } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 
 export default function TabLayout() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
 
+  // The AuthProvider now handles the redirect logic.
+  // We only need to show a loading indicator here while the initial session is being fetched.
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#D4AF37" />
       </View>
     );
-  }
-
-  if (!user) {
-    return <Redirect href="/auth" />;
   }
 
   return (
