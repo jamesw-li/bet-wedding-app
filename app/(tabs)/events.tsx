@@ -78,9 +78,11 @@ export default function EventsScreen() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
+      weekday: 'long',
+      month: 'long',
       day: 'numeric',
       year: 'numeric',
+      timeZone: 'UTC',
     });
   };
 
