@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Alert, // Import Alert
 } from 'react-native';
 import { Trophy, Medal, Award, TrendingUp } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,113 +35,67 @@ export default function LeaderboardScreen() {
   });
   const [loading, setLoading] = useState(true);
 
+  // CORRECTED and ASYNC version of the function
+  const loadLeaderboard = async () => {
+    if (!user) return;
 
-      const loadLeaderboard = async () => {
-  if (!user) return;
+    try {
+      // Step 1: Get all participant data from all events
+      const { data: participantsData, error: participantsError } = await supabase
+        .from('event_participants')
+        .select('user_id, total_points');
 
-  try {
-    // Step 1: Get all participant data from all events
-    const { data: participantsData, error: participantsError } = await supabase
-      .from('event_participants')
-      .select('user_id, total_points');
+      if (participantsError) throw participantsError;
 
-    if (participantsError) throw participantsError;
-
-    // Step 2: Aggregate the points and event counts for each user
-    const userStatsMap = new Map<string, { total_points: number; events_count: number }>();
-    participantsData?.forEach(p => {
-      const existing = userStatsMap.get(p.user_id);
-      if (existing) {
-        existing.total_points += p.total_points;
-        existing.events_count += 1;
-      } else {
-        userStatsMap.set(p.user_id, {
-          total_points: p.total_points,
-          events_count: 1,
-        });
-      }
-    });
-
-    if (userStatsMap.size === 0) {
-      setLoading(false);
-      return;
-    }
-
-    // Step 3: Fetch the public profiles for the users who have participated in events
-    const userIds = Array.from(userStatsMap.keys());
-    const { data: profilesData, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, email')
-      .in('id', userIds);
-
-    if (profilesError) throw profilesError;
-
-    const emailMap = new Map<string, string>();
-    profilesData?.forEach(p => {
-      if (p.email) emailMap.set(p.id, p.email);
-    });
-
-    // Step 4: Combine the stats and profile data to build the final leaderboard
-    const leaderboardEntries: LeaderboardEntry[] = Array.from(userStatsMap.entries())
-      .map(([userId, stats]) => ({
-        user_id: userId,
-        email: emailMap.get(userId) || 'Unknown User',
-        total_points: stats.total_points,
-        events_participated: stats.events_count,
-        rank: 0,
-      }))
-      .sort((a, b) => b.total_points - a.total_points)
-      .map((entry, index) => ({ ...entry, rank: index + 1 }));
-
-    setGlobalLeaderboard(leaderboardEntries);
-
-    // Find and set the stats for the currently logged-in user
-    const currentUserStats = leaderboardEntries.find(entry => entry.user_id === user.id);
-    if (currentUserStats) {
-      setUserStats({
-        rank: currentUserStats.rank,
-        total_points: currentUserStats.total_points,
-        events_participated: currentUserStats.events_participated,
+      // Step 2: Aggregate the points and event counts for each user
+      const userStatsMap = new Map<string, { total_points: number; events_count: number }>();
+      participantsData?.forEach(p => {
+        const existing = userStatsMap.get(p.user_id);
+        if (existing) {
+          existing.total_points += p.total_points;
+          existing.events_count += 1;
+        } else {
+          userStatsMap.set(p.user_id, {
+            total_points: p.total_points,
+            events_count: 1,
+          });
+        }
       });
-    }
 
-  } catch (error) {
-    console.error('Error loading leaderboard:', error);
-    Alert.alert('Error', 'Failed to load leaderboard data.');
-  } finally {
-    setLoading(false);
-  }
-};
-      
-      // Get user emails
-      const userIds = Array.from(userPointsMap.keys());
-      const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
-      
-      if (usersError) {
-        console.error('Error fetching users:', usersError);
+      if (userStatsMap.size === 0) {
+        setLoading(false);
         return;
       }
 
-      // Create leaderboard entries
-      const leaderboardEntries: LeaderboardEntry[] = userIds
-        .map(userId => {
-          const userInfo = usersData.users.find(u => u.id === userId);
-          const stats = userPointsMap.get(userId)!;
-          
-          return {
-            user_id: userId,
-            email: userInfo?.email || 'Unknown',
-            total_points: stats.total_points,
-            events_participated: stats.events_count,
-            rank: 0, // Will be set after sorting
-          };
-        })
+      // Step 3: Fetch the public profiles for the users who have participated in events
+      const userIds = Array.from(userStatsMap.keys());
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .in('id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      const emailMap = new Map<string, string>();
+      profilesData?.forEach(p => {
+        if (p.email) emailMap.set(p.id, p.email);
+      });
+
+      // Step 4: Combine the stats and profile data to build the final leaderboard
+      const leaderboardEntries: LeaderboardEntry[] = Array.from(userStatsMap.entries())
+        .map(([userId, stats]) => ({
+          user_id: userId,
+          email: emailMap.get(userId) || 'Unknown User',
+          total_points: stats.total_points,
+          events_participated: stats.events_count,
+          rank: 0,
+        }))
         .sort((a, b) => b.total_points - a.total_points)
         .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
       setGlobalLeaderboard(leaderboardEntries);
 
-      // Set user stats
+      // Find and set the stats for the currently logged-in user
       const currentUserStats = leaderboardEntries.find(entry => entry.user_id === user.id);
       if (currentUserStats) {
         setUserStats({
@@ -149,8 +104,10 @@ export default function LeaderboardScreen() {
           events_participated: currentUserStats.events_participated,
         });
       }
+
     } catch (error) {
       console.error('Error loading leaderboard:', error);
+      Alert.alert('Error', 'Failed to load leaderboard data.');
     } finally {
       setLoading(false);
     }
@@ -346,6 +303,7 @@ export default function LeaderboardScreen() {
   );
 }
 
+// Styles remain the same
 const styles = StyleSheet.create({
   container: {
     flex: 1,
