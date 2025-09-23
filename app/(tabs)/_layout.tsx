@@ -1,57 +1,61 @@
-import { Stack, useRouter, useSegments } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { Tabs } from 'expo-router';
+import { Home, Calendar, Trophy, User } from 'lucide-react-native';
 
-// This component will handle the redirection logic
-const RootLayoutNav = () => {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-  const segments = useSegments();
-
-  useEffect(() => {
-    // Wait until the auth state is loaded
-    if (loading) {
-      return;
-    }
-
-    const inAuthGroup = segments[0] === 'auth';
-
-    if (!user && !inAuthGroup) {
-      // If the user is not signed in and they are not on the auth screen,
-      // redirect them to the auth screen.
-      router.replace('/auth');
-    } else if (user && inAuthGroup) {
-      // If the user is signed in and they are on the auth screen,
-      // redirect them to the main app screen.
-      router.replace('/(tabs)');
-    }
-  }, [user, loading, segments, router]);
-
-  // Show a loading screen while we determine the auth state
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
+export default function TabLayout() {
+  // No more loading or redirect logic is needed here.
+  // The root layout handles protecting this screen.
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="auth" />
-      <Stack.Screen name="+not-found" />
-    </Stack>
-  );
-};
-
-export default function RootLayout() {
-  return (
-    <AuthProvider>
-      <RootLayoutNav />
-      <StatusBar style="auto" />
-    </AuthProvider>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: '#D4AF37',
+        tabBarInactiveTintColor: '#8B8B8B',
+        tabBarStyle: {
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: '#F0F0F0',
+          paddingTop: 8,
+          paddingBottom: 8,
+          height: 64,
+        },
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ size, color }) => (
+            <Home size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="events"
+        options={{
+          title: 'Events',
+          tabBarIcon: ({ size, color }) => (
+            <Calendar size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="leaderboard"
+        options={{
+          title: 'Leaderboard',
+          tabBarIcon: ({ size, color }) => (
+            <Trophy size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ size, color }) => (
+            <User size={size} color={color} />
+          ),
+        }}
+      />
+    </Tabs>
   );
 }
