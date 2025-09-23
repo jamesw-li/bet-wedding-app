@@ -22,68 +22,53 @@ export default function JoinEventScreen() {
       Alert.alert('Error', 'Please enter an access code');
       return;
     }
-
+  
     setLoading(true);
-
+  
     try {
-      // Find event by access code
-      const { data: event, error: eventError } = await supabase
-        .from('events')
-        .select('*')
-        .eq('access_code', accessCode.trim().toUpperCase())
+      // THE FIX: Call the new database function to find the event
+      const { data: eventData, error: eventError } = await supabase
+        .rpc('get_event_by_access_code', { access_code_to_check: accessCode.trim().toUpperCase() })
         .single();
-
-      if (eventError || !event) {
+  
+      if (eventError || !eventData) {
         Alert.alert('Error', 'Invalid access code. Please check and try again.');
         setLoading(false);
         return;
       }
-
+      
+      const eventId = eventData.id;
+  
       // Check if user is already a participant
       const { data: existingParticipant } = await supabase
         .from('event_participants')
-        .select('*')
-        .eq('event_id', event.id)
+        .select('id')
+        .eq('event_id', eventId)
         .eq('user_id', user!.id)
         .single();
-
+  
       if (existingParticipant) {
-        Alert.alert(
-          'Already Joined',
-          'You are already a participant in this event!',
-          [
-            {
-              text: 'View Event',
-              onPress: () => router.replace(`/events/${event.id}`),
-            },
-          ]
+        Alert.alert('Already Joined', 'You are already a participant in this event!',
+          [{ text: 'View Event', onPress: () => router.replace(`/events/${eventId}`) }]
         );
         setLoading(false);
         return;
       }
-
-      // Add user as participant
+  
+      // Add user as a participant
       const { error: participantError } = await supabase
         .from('event_participants')
-        .insert([
-          {
-            event_id: event.id,
-            user_id: user!.id,
-          },
-        ]);
-
+        .insert([{ event_id: eventId, user_id: user!.id }]);
+  
       if (participantError) throw participantError;
-
-      Alert.alert(
-        'Success!',
-        `You've successfully joined "${event.title}"!`,
-        [
-          {
-            text: 'View Event',
-            onPress: () => router.replace(`/events/${event.id}`),
-          },
-        ]
+  
+      // Fetch the event title for the success message
+      const { data: eventDetails } = await supabase.from('events').select('title').eq('id', eventId).single();
+  
+      Alert.alert('Success!', `You've successfully joined "${eventDetails?.title || 'the event'}"!`,
+        [{ text: 'View Event', onPress: () => router.replace(`/events/${eventId}`) }]
       );
+  
     } catch (error: any) {
       console.error('Error joining event:', error);
       Alert.alert('Error', error.message || 'Failed to join event');
