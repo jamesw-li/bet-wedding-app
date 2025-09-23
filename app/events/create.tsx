@@ -15,16 +15,28 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
+// A new helper function to validate the date's logic
+const isValidDate = (dateString: string) => {
+  const date = new Date(dateString);
+  // An invalid date's time is NaN
+  if (isNaN(date.getTime())) {
+    return false;
+  }
+  // This clever trick checks if the created date matches the input.
+  // For "2025-10-33", new Date() creates a valid date for Nov 2, so this check will fail.
+  return date.toISOString().slice(0, 10) === dateString;
+};
+
 export default function CreateEventScreen() {
   const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date());
-  const [dateString, setDateString] = useState(''); // FIX: Default is now blank
+  const [dateString, setDateString] = useState(''); // Default is blank
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [dateError, setDateError] = useState<string | null>(null); // State for inline error
   const [titleError, setTitleError] = useState<string | null>(null);
+  const [dateError, setDateError] = useState<string | null>(null);
 
   const formatDateForSupabase = (d: Date) => {
     const year = d.getFullYear();
@@ -41,27 +53,34 @@ export default function CreateEventScreen() {
   };
 
   const handleCreate = async () => {
+    // Clear previous errors
     setTitleError(null);
-    setDateError(null); // Clear previous errors
+    setDateError(null);
+
+    let hasError = false;
 
     if (!title.trim()) {
       setTitleError('Please enter an event title.');
-      return;
+      hasError = true;
     }
 
     let finalDate = '';
-
     if (Platform.OS === 'web') {
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(dateString)) {
-        // FIX: Set the inline error message instead of using an alert
         setDateError('Invalid Date Format: Please use YYYY-MM-DD.');
-        return;
+        hasError = true;
+      } else if (!isValidDate(dateString)) { // THE FIX: Add the logical date check
+        setDateError('Please enter a real, valid date.');
+        hasError = true;
+      } else {
+        finalDate = dateString;
       }
-      finalDate = dateString;
     } else {
       finalDate = formatDateForSupabase(date);
     }
+    
+    if (hasError) return;
 
     setLoading(true);
 
@@ -117,10 +136,20 @@ export default function CreateEventScreen() {
           <Text style={styles.label}>Event Title *</Text>
           <View style={styles.inputContainer}>
             <Type size={20} color="#6B7280" />
-            <TextInput style={styles.input} placeholder="e.g., Sarah & John's Wedding" value={title} onChangeText={setTitle} placeholderTextColor="#9CA3AF" />
+            <TextInput 
+              style={styles.input} 
+              placeholder="e.g., Sarah & John's Wedding" 
+              value={title} 
+              onChangeText={(text) => {
+                setTitle(text);
+                setTitleError(null);
+              }} 
+              placeholderTextColor="#9CA3AF" 
+            />
           </View>
+          {titleError && <Text style={styles.errorText}>{titleError}</Text>}
         </View>
-        {titleError && <Text style={styles.errorText}>{titleError}</Text>}
+
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Wedding Date *</Text>
           {Platform.OS === 'web' ? (
@@ -133,12 +162,11 @@ export default function CreateEventScreen() {
                   value={dateString}
                   onChangeText={(text) => {
                     setDateString(text);
-                    setDateError(null); // Clear error when user types
+                    setDateError(null);
                   }}
                   placeholderTextColor="#9CA3AF"
                 />
               </View>
-              {/* FIX: Conditionally render the error message */}
               {dateError && <Text style={styles.errorText}>{dateError}</Text>}
             </>
           ) : (
@@ -219,7 +247,6 @@ const styles = StyleSheet.create({
   createButton: { backgroundColor: '#D4AF37', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginBottom: 40 },
   createButtonDisabled: { backgroundColor: '#D1D5DB' },
   createButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
-  // FIX: Add a style for the inline error text
   errorText: {
     color: '#EF4444',
     fontSize: 14,
