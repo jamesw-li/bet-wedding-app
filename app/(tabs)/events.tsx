@@ -24,62 +24,34 @@ export default function EventsScreen() {
 
   const loadEvents = async () => {
     if (!user) return;
-
+  
     try {
-      // THE FIX: Use the same secure and non-recursive query as the home screen.
-      const { data: participantEntries, error } = await supabase
-        .from('event_participants')
+      // Use the same corrected query here.
+      const { data: eventsData, error } = await supabase
+        .from('events')
         .select(`
-          events (
-            *,
-            event_participants (
-              count
-            )
-          )
+          *,
+          event_participants(count)
         `)
-        .eq('user_id', user.id);
-
+        .order('created_at', { ascending: false });
+  
       if (error) throw error;
-
-      const processedEvents = participantEntries?.map(entry => {
-        const event = entry.events as any;
-        return {
-          ...event,
-          participant_count: event.event_participants[0]?.count ?? 0,
-          is_creator: event.creator_id === user.id,
-        };
-      }) || [];
-
-      setEvents(processedEvents.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
-
+  
+      const processedEvents = eventsData?.map(event => ({
+        ...event,
+        participant_count: Array.isArray(event.event_participants) 
+          ? event.event_participants[0]?.count || 0
+          : 0,
+        is_creator: event.creator_id === user.id,
+      })) || [];
+  
+      setEvents(processedEvents);
     } catch (error) {
       console.error('Error loading events:', error);
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    loadEvents();
-  }, [user]);
-
-  const onRefresh = async () => {
-    setLoading(true);
-    await loadEvents();
-  };
-
-  const filteredEvents = events.filter(event => {
-    const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    switch (activeTab) {
-      case 'created':
-        return matchesSearch && event.is_creator;
-      case 'joined':
-        return matchesSearch && !event.is_creator;
-      default:
-        return matchesSearch;
-    }
-  });
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
