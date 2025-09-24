@@ -129,7 +129,6 @@ export default function LeaderboardScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Leaderboard</Text>
         <TrendingUp size={28} color="#D4AF37" />
-         {/* THE FIX: Only show the refresh button on web */}
         {Platform.OS === 'web' && (
           <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
             <RefreshCw size={24} color="#6B7280" />
