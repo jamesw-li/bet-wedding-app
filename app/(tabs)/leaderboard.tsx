@@ -478,4 +478,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
+  refreshButton: {
+    padding: 8,
+  },
 });
