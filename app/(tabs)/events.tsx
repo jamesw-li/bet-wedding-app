@@ -26,9 +26,8 @@ export default function EventsScreen() {
     if (!user) return;
 
     try {
-      // THE FIX: This is a more explicit and correct query.
-      // It specifically asks for events where the current user is a participant.
-      const { data: eventsData, error } = await supabase
+      // THE FIX: Use the same secure and non-recursive query as the home screen.
+      const { data: participantEntries, error } = await supabase
         .from('event_participants')
         .select(`
           events (
@@ -41,15 +40,12 @@ export default function EventsScreen() {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      
-      // Process the data, which is now nested
-      const processedEvents = eventsData?.map(item => {
-        const event = item.events as Event;
+
+      const processedEvents = participantEntries?.map(entry => {
+        const event = entry.events as any;
         return {
           ...event,
-          participant_count: Array.isArray(event.event_participants) 
-            ? event.event_participants[0]?.count || 0
-            : 0,
+          participant_count: event.event_participants[0]?.count ?? 0,
           is_creator: event.creator_id === user.id,
         };
       }) || [];
