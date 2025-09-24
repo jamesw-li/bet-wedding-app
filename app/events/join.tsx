@@ -26,12 +26,11 @@ export default function JoinEventScreen() {
     setLoading(true);
   
     try {
-      // THE FIX: Call the new database function to find the event
-      const { data: eventData, error: eventError } = await supabase
+      const { data: eventData, error: rpcError } = await supabase
         .rpc('get_event_by_access_code', { access_code_to_check: accessCode.trim().toUpperCase() })
         .single();
   
-      if (eventError || !eventData) {
+      if (rpcError || !eventData) {
         Alert.alert('Error', 'Invalid access code. Please check and try again.');
         setLoading(false);
         return;
@@ -39,30 +38,18 @@ export default function JoinEventScreen() {
       
       const eventId = eventData.id;
   
-      // Check if user is already a participant
-      const { data: existingParticipant } = await supabase
+      // THE FIX: Directly attempt to insert the user as a participant.
+      // The database will automatically handle duplicates.
+      const { error: insertError } = await supabase
         .from('event_participants')
-        .select('id')
-        .eq('event_id', eventId)
-        .eq('user_id', user!.id)
-        .single();
+        .insert({ event_id: eventId, user_id: user!.id });
   
-      if (existingParticipant) {
-        Alert.alert('Already Joined', 'You are already a participant in this event!',
-          [{ text: 'View Event', onPress: () => router.replace(`/events/${eventId}`) }]
-        );
-        setLoading(false);
-        return;
+      // A '23505' error code means the user is already in the event, which is not a real error for us.
+      if (insertError && insertError.code !== '23505') {
+        throw insertError; // Throw any other unexpected errors.
       }
   
-      // Add user as a participant
-      const { error: participantError } = await supabase
-        .from('event_participants')
-        .insert([{ event_id: eventId, user_id: user!.id }]);
-  
-      if (participantError) throw participantError;
-  
-      // Fetch the event title for the success message
+      // Now that the user is successfully a participant, fetch the event title.
       const { data: eventDetails } = await supabase.from('events').select('title').eq('id', eventId).single();
   
       Alert.alert('Success!', `You've successfully joined "${eventDetails?.title || 'the event'}"!`,
