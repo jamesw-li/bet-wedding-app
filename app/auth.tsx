@@ -187,22 +187,22 @@ export default function AuthScreen() {
           </Text>
           <View style={styles.feature}>
             <Text style={styles.featureText}>
-              投 Create and manage wedding betting events
+              • Create and manage wedding betting events
             </Text>
           </View>
           <View style={styles.feature}>
             <Text style={styles.featureText}>
-              識 Place bets on wedding predictions
+              • Place bets on wedding predictions
             </Text>
           </View>
           <View style={styles.feature}>
             <Text style={styles.featureText}>
-              醇 Compete on global leaderboards
+              • Compete on global leaderboards
             </Text>
           </View>
           <View style={styles.feature}>
             <Text style={styles.featureText}>
-              腸 Win points and earn bragging rights
+              • Win points and earn bragging rights
             </Text>
           </View>
         </View>
