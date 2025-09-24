@@ -99,11 +99,6 @@ export default function EventsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Your Events</Text>
-        {Platform.OS === 'web' && (
-          <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
-            <RefreshCw size={24} color="#6B7280" />
-          </TouchableOpacity>
-        )}
         <TouchableOpacity
           style={styles.createButton}
           onPress={() => router.push('/events/create')}
@@ -111,6 +106,11 @@ export default function EventsScreen() {
           <Plus size={20} color="#FFFFFF" />
           <Text style={styles.createButtonText}>Create Event</Text>
         </TouchableOpacity>
+        {Platform.OS === 'web' && (
+          <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
+            <RefreshCw size={24} color="#6B7280" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Search and Filters */}
