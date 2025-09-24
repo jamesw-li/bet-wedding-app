@@ -53,25 +53,20 @@ export default function CreateEventScreen() {
   };
 
   const handleCreate = async () => {
-    // Clear previous errors
     setTitleError(null);
     setDateError(null);
-
     let hasError = false;
-
+  
     if (!title.trim()) {
       setTitleError('Please enter an event title.');
       hasError = true;
     }
-
+  
     let finalDate = '';
     if (Platform.OS === 'web') {
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(dateString)) {
-        setDateError('Invalid Date Format: Please use YYYY-MM-DD.');
-        hasError = true;
-      } else if (!isValidDate(dateString)) { // THE FIX: Add the logical date check
-        setDateError('Please enter a real, valid date.');
+      if (!dateRegex.test(dateString) || !isValidDate(dateString)) {
+        setDateError('Please enter a real, valid date in YYYY-MM-DD format.');
         hasError = true;
       } else {
         finalDate = dateString;
@@ -81,40 +76,22 @@ export default function CreateEventScreen() {
     }
     
     if (hasError) return;
-
+  
     setLoading(true);
-
+  
     try {
-      const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      // THE FIX: Call the new, secure database function with a single RPC command.
+      const { data: newEventId, error } = await supabase.rpc('create_event_and_add_creator', {
+        title: title.trim(),
+        description: description.trim() || null,
+        date: finalDate,
+      });
+  
+      if (error) throw error;
       
-      const { data, error: eventError } = await supabase
-        .from('events')
-        .insert([{
-            title: title.trim(),
-            description: description.trim() || null,
-            date: finalDate,
-            creator_id: user!.id,
-            access_code: accessCode,
-        }])
-        .select()
-        .single();
-
-      if (eventError) throw eventError;
-      
-      const newEventId = data.id;
-      await supabase.from('event_participants').insert([{ event_id: newEventId, user_id: user!.id }]);
-      const defaultCategories = [
-        { title: 'First Dance Song', description: "What will be the couple's first dance song?", options: ['A Love Song', 'Classic Rock', 'Pop Hit', 'Country Song', 'Other'], points: 10 },
-        { title: 'Who Will Cry First?', description: 'Who will be the first to shed tears during the ceremony?', options: ['Bride', 'Groom', 'Mother of Bride', 'Mother of Groom', 'Someone Else'], points: 15 },
-        { title: 'Bouquet Catch', description: 'Who will catch the bouquet?', options: ['Single Friend', 'Married Friend', 'Family Member', 'Child', 'No One'], points: 20 },
-        { title: 'Speech Duration', description: "How long will the best man's speech be?", options: ['Under 2 minutes', '2-5 minutes', '5-10 minutes', 'Over 10 minutes'], points: 10 },
-        { title: 'Wedding Crasher', description: 'Will there be any unexpected guests?', options: ['Yes', 'No'], points: 25 },
-      ];
-      const categoriesWithEventId = defaultCategories.map(cat => ({ ...cat, event_id: newEventId }));
-      await supabase.from('bet_categories').insert(categoriesWithEventId);
-      
+      // Redirect to the new event's page
       router.replace(`/events/${newEventId}`);
-
+  
     } catch (error: any) {
       console.error('Error creating event:', error);
       Alert.alert('Error', error.message || 'Failed to create event');
