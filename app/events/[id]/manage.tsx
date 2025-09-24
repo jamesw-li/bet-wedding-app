@@ -274,4 +274,7 @@ const styles = StyleSheet.create({
     cancelButtonText: { color: '#4B5563', fontWeight: '600' },
     confirmButton: { backgroundColor: '#EF4444', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
     confirmButtonText: { color: '#FFFFFF', fontWeight: '600' },
+    refreshButton: {
+      padding: 8,
+    },
 });
