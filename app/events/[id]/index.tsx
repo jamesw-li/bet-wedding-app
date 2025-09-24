@@ -381,6 +381,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
+    flexDirection: 'row',   
+    justifyContent: 'space-between', 
+    alignItems: 'center',  
   },
   backButton: {
     marginRight: 16,
