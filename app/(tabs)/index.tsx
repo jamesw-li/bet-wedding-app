@@ -18,23 +18,19 @@ type EventParticipant = Database['public']['Tables']['event_participants']['Row'
 export default function HomeScreen() {
   const { user } = useAuth();
   const [events, setEvents] = useState<(Event & { participant_count?: number })[]>([]);
-  const [stats, setStats] = useState({
-    totalEvents: 0,
-    totalBets: 0,
-    totalPoints: 0,
-  });
+  const [stats, setStats] = useState({ totalEvents: 0, totalBets: 0, totalPoints: 0 });
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
     if (!user) return;
-  
+
     try {
-      // THE FIX: This query is more secure and avoids the recursion.
-      // It fetches the events that the user is a participant in.
+      // THE FIX: This query is more secure and avoids recursion.
+      // It fetches the events the user has joined via the event_participants table.
       const { data: participantEntries, error: eventsError } = await supabase
         .from('event_participants')
         .select(`
-          *,
+          total_points,
           events (
             *,
             event_participants (
@@ -43,35 +39,30 @@ export default function HomeScreen() {
           )
         `)
         .eq('user_id', user.id);
-  
+
       if (eventsError) throw eventsError;
-  
-      // Process the nested data
+
       const processedEvents = participantEntries?.map(entry => {
-        const event = entry.events as Event & { event_participants: { count: number }[] };
+        const event = entry.events as any; // Cast to any to handle nested structure
         return {
           ...event,
           participant_count: event.event_participants[0]?.count ?? 0,
         };
       }) || [];
-  
+
       setEvents(processedEvents.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
-  
-      // Load user stats
-      const { data: betsData } = await supabase
-        .from('bets')
-        .select('points_earned')
-        .eq('user_id', user.id);
-  
+
+      const { data: betsData } = await supabase.from('bets').select('points_earned').eq('user_id', user.id);
+      
       const totalBets = betsData?.length || 0;
       const totalPoints = participantEntries?.reduce((sum, p) => sum + p.total_points, 0) || 0;
-  
+
       setStats({
         totalEvents: processedEvents.length,
         totalBets,
         totalPoints,
       });
-  
+
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -79,9 +70,7 @@ export default function HomeScreen() {
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, [user]);
+  useEffect(() => { loadData(); }, [user]);
 
   const onRefresh = async () => {
     setLoading(true);
@@ -89,25 +78,15 @@ export default function HomeScreen() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-      timeZone: 'UTC',
-    });
+    return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
   };
-
+  
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
-        return '#10B981';
-      case 'completed':
-        return '#6B7280';
-      case 'cancelled':
-        return '#EF4444';
-      default:
-        return '#6B7280';
+      case 'active': return '#10B981';
+      case 'completed': return '#6B7280';
+      case 'cancelled': return '#EF4444';
+      default: return '#6B7280';
     }
   };
 
