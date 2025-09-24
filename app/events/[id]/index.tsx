@@ -31,32 +31,57 @@ export default function EventDetailScreen() {
   const [loading, setLoading] = useState(true);
 
   const loadEventData = async () => {
-    // ... (rest of the function is the same)
-    if (!user || !id) return;
-    try {
-      const { data: eventData, error: eventError } = await supabase.from('events').select('*').eq('id', id).single();
-      if (eventError) throw eventError;
-      setEvent(eventData);
-      const { data: categoriesData, error: categoriesError } = await supabase.from('bet_categories').select('*').eq('event_id', id).order('created_at', { ascending: true });
-      if (categoriesError) throw categoriesError;
-      setCategories(categoriesData || []);
-      const { data: betsData, error: betsError } = await supabase.from('bets').select('*').eq('user_id', user.id).eq('event_id', id);
-      if (betsError) throw betsError;
-      const betsMap = (betsData || []).reduce((acc, bet) => {
-        acc[bet.category_id] = bet;
-        return acc;
-      }, {} as Record<string, Bet>);
-      setUserBets(betsMap);
-      const { data: participantsData, error: participantsError } = await supabase.from('event_participants').select('*').eq('event_id', id).order('total_points', { ascending: false });
-      if (participantsError) throw participantsError;
-      setParticipants(participantsData || []);
-    } catch (error) {
-      console.error('Error loading event data:', error);
-      Alert.alert('Error', 'Failed to load event data');
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (!user || !id) return;
+  try {
+    // THE FIX: Break the query into separate, non-recursive steps.
+
+    // Step 1: Get the main event details. This is safe because the RLS policy can resolve it.
+    const { data: eventData, error: eventError } = await supabase
+      .from('events')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (eventError) throw eventError;
+    setEvent(eventData);
+
+    // Step 2: Get the bet categories for this event.
+    const { data: categoriesData, error: categoriesError } = await supabase
+      .from('bet_categories')
+      .select('*')
+      .eq('event_id', id)
+      .order('created_at', { ascending: true });
+    if (categoriesError) throw categoriesError;
+    setCategories(categoriesData || []);
+
+    // Step 3: Get the user's bets for this event.
+    const { data: betsData, error: betsError } = await supabase
+      .from('bets')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('event_id', id);
+    if (betsError) throw betsError;
+    const betsMap = (betsData || []).reduce((acc, bet) => {
+      acc[bet.category_id] = bet;
+      return acc;
+    }, {} as Record<string, Bet>);
+    setUserBets(betsMap);
+
+    // Step 4: Get the list of all participants for this event.
+    const { data: participantsData, error: participantsError } = await supabase
+      .from('event_participants')
+      .select('*')
+      .eq('event_id', id)
+      .order('total_points', { ascending: false });
+    if (participantsError) throw participantsError;
+    setParticipants(participantsData || []);
+
+  } catch (error) {
+    console.error('Error loading event data:', error);
+    Alert.alert('Error', 'Failed to load event data');
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     loadEventData();
