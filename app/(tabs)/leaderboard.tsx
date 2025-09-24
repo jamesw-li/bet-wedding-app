@@ -11,6 +11,8 @@ import {
 import { Trophy, Medal, Award, TrendingUp } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, Database } from '@/lib/supabase';
+import { Platform } from 'react-native';
+import { RefreshCw } from 'lucide-react-native';
 
 type EventParticipant = Database['public']['Tables']['event_participants']['Row'] & {
   user?: { email: string };
