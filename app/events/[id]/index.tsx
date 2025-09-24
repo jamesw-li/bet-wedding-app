@@ -14,6 +14,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, Database } from '@/lib/supabase';
 import { Platform } from 'react-native';
+import { RefreshCw } from 'lucide-react-native'; 
 
 type Event = Database['public']['Tables']['events']['Row'];
 type BetCategory = Database['public']['Tables']['bet_categories']['Row'];
