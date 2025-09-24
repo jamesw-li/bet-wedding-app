@@ -45,11 +45,12 @@ export default function JoinEventScreen() {
   
       // THE FIX: Use a platform-specific confirmation and redirect.
       if (Platform.OS === 'web') {
-        // On web, show a simple browser alert (which doesn't block execution) and redirect immediately.
-        alert(message);
         router.replace(`/events/${event_id}`);
       } else {
         // On mobile, keep the native pop-up for a better user experience.
+        const message = already_joined
+        ? `You are already a participant in "${event_title}"!`
+        : `You've successfully joined "${event_title}"!`;
         Alert.alert(
           already_joined ? 'Already Joined' : 'Success!',
           message,
