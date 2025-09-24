@@ -76,17 +76,17 @@ export default function ManageEventScreen() {
 
   const toggleCategoryStatus = async (categoryId: string, newStatus: 'open' | 'closed') => {
     try {
-      const { error } = await supabase
-        .from('bet_categories')
-        .update({ status: newStatus })
-        .eq('id', categoryId);
+      // THE FIX: Call the new, secure database function instead of updating the table directly.
+      const { error } = await supabase.rpc('update_category_status', {
+        p_category_id: categoryId,
+        p_new_status: newStatus,
+      });
   
       if (error) throw error;
   
-      // After a successful update, just refresh the data.
-      // The UI change of the toggle is enough feedback for the user.
+      // After a successful update, refresh the data to show the change.
       await loadEventData();
-  
+      
     } catch (error: any) {
       console.error('Error updating category status:', error);
       // Use a reliable alert for errors on all platforms.
