@@ -662,4 +662,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '600',
   },
+  refreshButton: {
+    padding: 8,
+  },
 });
