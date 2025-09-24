@@ -26,9 +26,8 @@ export default function JoinEventScreen() {
     setLoading(true);
   
     try {
-      // THE FIX: Call the new, single database function to handle the entire join process.
       const { data, error } = await supabase
-        .rpc('join_event_with_code', { access_code_to_check: accessCode.trim() })
+        .rpc('join_event_with_code', { access_code_to_check: accessCode.trim().toUpperCase() })
         .single();
   
       if (error) throw error;
@@ -39,16 +38,23 @@ export default function JoinEventScreen() {
       }
   
       const { event_id, event_title, already_joined } = data;
-  
       const message = already_joined
         ? `You are already a participant in "${event_title}"!`
         : `You've successfully joined "${event_title}"!`;
-      
-      Alert.alert(
-        already_joined ? 'Already Joined' : 'Success!',
-        message,
-        [{ text: 'View Event', onPress: () => router.replace(`/events/${event_id}`) }]
-      );
+  
+      // THE FIX: Use a platform-specific confirmation and redirect.
+      if (Platform.OS === 'web') {
+        // On web, show a simple browser alert (which doesn't block execution) and redirect immediately.
+        alert(message);
+        router.replace(`/events/${event_id}`);
+      } else {
+        // On mobile, keep the native pop-up for a better user experience.
+        Alert.alert(
+          already_joined ? 'Already Joined' : 'Success!',
+          message,
+          [{ text: 'View Event', onPress: () => router.replace(`/events/${event_id}`) }]
+        );
+      }
   
     } catch (error: any) {
       console.error('Error joining event:', error);
