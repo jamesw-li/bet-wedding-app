@@ -120,13 +120,21 @@ export default function LeaderboardScreen() {
       style={styles.container}
       contentContainerStyle={{ flexGrow: 1 }}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#D4AF37']} />
+        Platform.OS === 'web' ? undefined : (
+          <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#D4AF37']} />
+        )
       }
     >
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Leaderboard</Text>
         <TrendingUp size={28} color="#D4AF37" />
+         {/* THE FIX: Only show the refresh button on web */}
+        {Platform.OS === 'web' && (
+          <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
+            <RefreshCw size={24} color="#6B7280" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* User Stats Card */}
