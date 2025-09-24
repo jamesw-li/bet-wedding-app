@@ -44,9 +44,6 @@ export default function HomeScreen() {
   const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
   const getStatusColor = (status: string) => { /* ... (implementation is correct) ... */ };
 
-  return ( /* ... (JSX remains the same) ... */ );
-}
-
   return (
     <ScrollView
       style={styles.container}
