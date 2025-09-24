@@ -193,9 +193,12 @@ export default function EventDetailScreen() {
 
       <ScrollView
         style={styles.content}
+        contentContainerStyle={{ flexGrow: 1 }}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#D4AF37']} />
-        }
+          Platform.OS === 'web' ? undefined : (
+            <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#D4AF37']} />
+          )
+      }
       >
         <View style={styles.eventCard}>
           <View style={styles.eventHeader}>
