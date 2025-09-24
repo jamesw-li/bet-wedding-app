@@ -14,32 +14,25 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
-      if (!user) return;
-      try {
-        // THE FIX: Call the new, secure database function instead of querying the table directly.
-        const { data: eventsData, error: eventsError } = await supabase.rpc('get_user_events');
-        if (eventsError) throw eventsError;
-    
-        const processedEvents = eventsData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        setEvents(processedEvents);
-    
-        // Load user stats
-        const { count: betsCount } = await supabase.from('bets').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
-        const { data: participantData } = await supabase.from('event_participants').select('total_points').eq('user_id', user.id);
-    
-        const totalBets = betsCount || 0;
-        const totalPoints = participantData?.reduce((sum, p) => sum + p.total_points, 0) || 0;
-    
-        setStats({
-          totalEvents: processedEvents.length,
-          totalBets,
-          totalPoints,
-        });
-      } catch (error) {
-        console.error('Error loading data:', error);
-      } finally {
-        setLoading(false);
-      }
+    if (!user) return;
+    try {
+      // THE FIX: Call the new, single database function to get all data at once.
+      const { data, error } = await supabase.rpc('get_user_dashboard_data');
+  
+      if (error) throw error;
+  
+      // The data comes back as a single JSON object, so we parse it here.
+      const eventsData = data.events || [];
+      const statsData = data.stats || { totalEvents: 0, totalBets: 0, totalPoints: 0 };
+      
+      setEvents(eventsData.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+      setStats(statsData);
+  
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { loadData(); }, [user]);
