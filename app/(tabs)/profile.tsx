@@ -15,37 +15,24 @@ import { supabase } from '@/lib/supabase';
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   
-  // 1. Add state to hold the user's stats
   const [stats, setStats] = useState({
     eventsCreated: 0,
     totalPoints: 0,
   });
 
-  // 2. Add a function to load the stats from the database
+  // THE FIX: This function now calls our new, secure database function.
   const loadUserStats = async () => {
     if (!user) return;
     try {
-      // Query for the number of events created by the user
-      const { count: createdCount, error: createdError } = await supabase
-        .from('events')
-        .select('*', { count: 'exact', head: true })
-        .eq('creator_id', user.id);
+      const { data, error } = await supabase
+        .rpc('get_user_profile_stats')
+        .single();
       
-      if (createdError) throw createdError;
-
-      // Query for the total points from all events the user has participated in
-      const { data: participantData, error: pointsError } = await supabase
-        .from('event_participants')
-        .select('total_points')
-        .eq('user_id', user.id);
-
-      if (pointsError) throw pointsError;
-
-      const totalPoints = participantData?.reduce((sum, p) => sum + p.total_points, 0) || 0;
+      if (error) throw error;
 
       setStats({
-        eventsCreated: createdCount || 0,
-        totalPoints: totalPoints,
+        eventsCreated: data.events_created || 0,
+        totalPoints: data.total_points || 0,
       });
 
     } catch (error) {
@@ -53,7 +40,6 @@ export default function ProfileScreen() {
     }
   };
 
-  // 3. Load the stats when the component mounts or the user changes
   useEffect(() => {
     loadUserStats();
   }, [user]);
@@ -117,7 +103,6 @@ export default function ProfileScreen() {
           <View style={styles.statIcon}>
             <Calendar size={24} color="#10B981" />
           </View>
-          {/* 4. Display the stats from the state */}
           <Text style={styles.statNumber}>{stats.eventsCreated}</Text>
           <Text style={styles.statLabel}>Events Created</Text>
         </View>
@@ -126,7 +111,6 @@ export default function ProfileScreen() {
           <View style={styles.statIcon}>
             <Trophy size={24} color="#F59E0B" />
           </View>
-          {/* 4. Display the stats from the state */}
           <Text style={styles.statNumber}>{stats.totalPoints}</Text>
           <Text style={styles.statLabel}>Total Points</Text>
         </View>
@@ -327,3 +311,4 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
   },
 });
+
