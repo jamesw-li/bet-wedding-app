@@ -198,6 +198,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
+    flexDirection: 'row',  
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
   },
   headerTitle: {
     fontSize: 28,
@@ -347,6 +350,9 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     marginTop: 8,
+  },
+  refreshButton: {
+    padding: 8,
   },
 });
 
