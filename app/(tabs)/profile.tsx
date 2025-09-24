@@ -1,36 +1,73 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Platform,
   Alert,
-  Platform, // 1. Import the Platform API
 } from 'react-native';
 import { LogOut, User, Mail, Calendar, Trophy, Settings } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
+  
+  // 1. Add state to hold the user's stats
+  const [stats, setStats] = useState({
+    eventsCreated: 0,
+    totalPoints: 0,
+  });
 
-  // 2. Re-introduce the handler function with platform-specific logic
+  // 2. Add a function to load the stats from the database
+  const loadUserStats = async () => {
+    if (!user) return;
+    try {
+      // Query for the number of events created by the user
+      const { count: createdCount, error: createdError } = await supabase
+        .from('events')
+        .select('*', { count: 'exact', head: true })
+        .eq('creator_id', user.id);
+      
+      if (createdError) throw createdError;
+
+      // Query for the total points from all events the user has participated in
+      const { data: participantData, error: pointsError } = await supabase
+        .from('event_participants')
+        .select('total_points')
+        .eq('user_id', user.id);
+
+      if (pointsError) throw pointsError;
+
+      const totalPoints = participantData?.reduce((sum, p) => sum + p.total_points, 0) || 0;
+
+      setStats({
+        eventsCreated: createdCount || 0,
+        totalPoints: totalPoints,
+      });
+
+    } catch (error) {
+      console.error('Error loading user stats:', error);
+    }
+  };
+
+  // 3. Load the stats when the component mounts or the user changes
+  useEffect(() => {
+    loadUserStats();
+  }, [user]);
+
   const handleSignOut = () => {
     if (Platform.OS === 'web') {
-      // On the web, sign out immediately without a pop-up
       signOut();
     } else {
-      // On mobile (iOS/Android), show the confirmation pop-up
       Alert.alert(
         'Sign Out',
         'Are you sure you want to sign out?',
         [
           { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Sign Out', 
-            style: 'destructive',
-            onPress: signOut 
-          },
+          { text: 'Sign Out', style: 'destructive', onPress: signOut },
         ]
       );
     }
@@ -46,7 +83,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1 }}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>
@@ -58,12 +95,12 @@ export default function ProfileScreen() {
           <User size={32} color="#D4AF37" />
         </View>
         <View style={styles.userInfo}>
-          <Text style={styles.userName}>
+          <Text style={styles.userName} numberOfLines={1}>
             {user?.email?.split('@')[0] || 'User'}
           </Text>
           <View style={styles.userDetail}>
             <Mail size={16} color="#6B7280" />
-            <Text style={styles.userDetailText}>{user?.email}</Text>
+            <Text style={styles.userDetailText} numberOfLines={1}>{user?.email}</Text>
           </View>
           <View style={styles.userDetail}>
             <Calendar size={16} color="#6B7280" />
@@ -80,7 +117,8 @@ export default function ProfileScreen() {
           <View style={styles.statIcon}>
             <Calendar size={24} color="#10B981" />
           </View>
-          <Text style={styles.statNumber}>0</Text>
+          {/* 4. Display the stats from the state */}
+          <Text style={styles.statNumber}>{stats.eventsCreated}</Text>
           <Text style={styles.statLabel}>Events Created</Text>
         </View>
         
@@ -88,52 +126,31 @@ export default function ProfileScreen() {
           <View style={styles.statIcon}>
             <Trophy size={24} color="#F59E0B" />
           </View>
-          <Text style={styles.statNumber}>0</Text>
+          {/* 4. Display the stats from the state */}
+          <Text style={styles.statNumber}>{stats.totalPoints}</Text>
           <Text style={styles.statLabel}>Total Points</Text>
         </View>
       </View>
 
-      {/* Menu Items */}
+      {/* Menu Items and other UI */}
       <View style={styles.menuContainer}>
         <Text style={styles.menuTitle}>Settings</Text>
-        
-        <TouchableOpacity style={styles.menuItem}>
-          <View style={styles.menuItemLeft}>
-            <Settings size={24} color="#6B7280" />
-            <Text style={styles.menuItemText}>App Settings</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem}>
-          <View style={styles.menuItemLeft}>
-            <User size={24} color="#6B7280" />
-            <Text style={styles.menuItemText}>Account Settings</Text>
-          </View>
-        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem}><View style={styles.menuItemLeft}><Settings size={24} color="#6B7280" /><Text style={styles.menuItemText}>App Settings</Text></View></TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem}><View style={styles.menuItemLeft}><User size={24} color="#6B7280" /><Text style={styles.menuItemText}>Account Settings</Text></View></TouchableOpacity>
       </View>
 
-      {/* Support */}
       <View style={styles.menuContainer}>
         <Text style={styles.menuTitle}>Support</Text>
-        
-        <TouchableOpacity style={styles.menuItem}>
-          <View style={styles.menuItemLeft}>
-            <Mail size={24} color="#6B7280" />
-            <Text style={styles.menuItemText}>Contact Support</Text>
-          </View>
-        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem}><View style={styles.menuItemLeft}><Mail size={24} color="#6B7280" /><Text style={styles.menuItemText}>Contact Support</Text></View></TouchableOpacity>
       </View>
 
-      {/* Sign Out */}
       <View style={styles.signOutContainer}>
-        {/* 3. Re-connect the button to the new handler function */}
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
           <LogOut size={24} color="#EF4444" />
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
 
-      {/* App Info */}
       <View style={styles.appInfo}>
         <Text style={styles.appVersion}>Wedding Betting v1.0.0</Text>
         <Text style={styles.appCopyright}>© 2025 Wedding Betting App</Text>
@@ -142,7 +159,6 @@ export default function ProfileScreen() {
   );
 }
 
-// Styles remain the same
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -202,6 +218,7 @@ const styles = StyleSheet.create({
   userDetailText: {
     fontSize: 14,
     color: '#6B7280',
+    flexShrink: 1,
   },
   statsContainer: {
     flexDirection: 'row',
