@@ -154,7 +154,13 @@ export default function ManageEventScreen() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={24} color="#1F2937" />
         </TouchableOpacity>
+        
         <Text style={styles.headerTitle}>Manage Event</Text>
+        {Platform.OS === 'web' && (
+          <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
+            <RefreshCw size={24} color="#6B7280" />
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView
