@@ -43,6 +43,7 @@ export default function HomeScreen() {
   return (
     <ScrollView
       style={styles.container}
+      contentContainerStyle={{ flexGrow: 1 }}
       refreshControl={
         <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#D4AF37']} />
       }
