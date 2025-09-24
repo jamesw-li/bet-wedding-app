@@ -99,6 +99,11 @@ export default function EventsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Your Events</Text>
+        {Platform.OS === 'web' && (
+          <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
+            <RefreshCw size={24} color="#6B7280" />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.createButton}
           onPress={() => router.push('/events/create')}
@@ -129,11 +134,15 @@ export default function EventsScreen() {
 
       {/* Events List */}
       <ScrollView
-        style={styles.listContainer}
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#D4AF37']} />
-        }
-      >
+          style={styles.container}
+          contentContainerStyle={{ flexGrow: 1 }}
+          // THE FIX: Only show RefreshControl on native mobile
+          refreshControl={
+            Platform.OS === 'web' ? undefined : (
+              <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#D4AF37']} />
+            )
+          }
+        >
         {filteredEvents.length === 0 ? (
           <View style={styles.emptyState}>
             <Calendar size={48} color="#D1D5DB" />
