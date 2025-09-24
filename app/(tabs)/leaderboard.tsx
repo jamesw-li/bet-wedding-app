@@ -35,68 +35,24 @@ export default function LeaderboardScreen() {
   });
   const [loading, setLoading] = useState(true);
 
-  // CORRECTED and ASYNC version of the function
   const loadLeaderboard = async () => {
     if (!user) return;
-
+    setLoading(true);
     try {
-      // Step 1: Get all participant data from all events
-      const { data: participantsData, error: participantsError } = await supabase
-        .from('event_participants')
-        .select('user_id, total_points');
-
-      if (participantsError) throw participantsError;
-
-      // Step 2: Aggregate the points and event counts for each user
-      const userStatsMap = new Map<string, { total_points: number; events_count: number }>();
-      participantsData?.forEach(p => {
-        const existing = userStatsMap.get(p.user_id);
-        if (existing) {
-          existing.total_points += p.total_points;
-          existing.events_count += 1;
-        } else {
-          userStatsMap.set(p.user_id, {
-            total_points: p.total_points,
-            events_count: 1,
-          });
-        }
-      });
-
-      if (userStatsMap.size === 0) {
-        setLoading(false);
-        return;
-      }
-
-      // Step 3: Fetch the public profiles for the users who have participated in events
-      const userIds = Array.from(userStatsMap.keys());
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, email')
-        .in('id', userIds);
-
-      if (profilesError) throw profilesError;
-
-      const emailMap = new Map<string, string>();
-      profilesData?.forEach(p => {
-        if (p.email) emailMap.set(p.id, p.email);
-      });
-
-      // Step 4: Combine the stats and profile data to build the final leaderboard
-      const leaderboardEntries: LeaderboardEntry[] = Array.from(userStatsMap.entries())
-        .map(([userId, stats]) => ({
-          user_id: userId,
-          email: emailMap.get(userId) || 'Unknown User',
-          total_points: stats.total_points,
-          events_participated: stats.events_count,
-          rank: 0,
-        }))
-        .sort((a, b) => b.total_points - a.total_points)
-        .map((entry, index) => ({ ...entry, rank: index + 1 }));
-
+      // THE FIX: Call the new, secure database function to get the leaderboard data.
+      const { data, error } = await supabase.rpc('get_leaderboard_data');
+  
+      if (error) throw error;
+      
+      // The data comes back pre-sorted and aggregated from the database.
+      const leaderboardEntries = data.map((entry: any, index: number) => ({
+        ...entry,
+        rank: index + 1,
+      }));
+      
       setGlobalLeaderboard(leaderboardEntries);
-
-      // Find and set the stats for the currently logged-in user
-      const currentUserStatWWs = leaderboardEntries.find(entry => entry.user_id === user.id);
+  
+      const currentUserStats = leaderboardEntries.find((entry: any) => entry.user_id === user.id);
       if (currentUserStats) {
         setUserStats({
           rank: currentUserStats.rank,
@@ -104,10 +60,10 @@ export default function LeaderboardScreen() {
           events_participated: currentUserStats.events_participated,
         });
       }
-
-    } catch (error) {
+  
+    } catch (error: any) {
       console.error('Error loading leaderboard:', error);
-      Alert.alert('Error', 'Failed to load leaderboard data.');
+      Alert.alert('Error', error.message || 'Failed to load leaderboard data.');
     } finally {
       setLoading(false);
     }
