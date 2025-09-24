@@ -34,33 +34,38 @@ export default function EventDetailScreen() {
     if (!user || !id) return;
     setLoading(true);
     try {
-      // This is now safe because the RLS policies are not recursive
-      const { data: eventData, error: eventError } = await supabase
-        .from('events')
-        .select('*, event_participants(*), bet_categories(*), bets(*)')
-        .eq('id', id)
-        .single();
+      // THE FIX: Call the new, secure database function to get all data at once.
+      const { data, error } = await supabase
+        .rpc('get_event_details', { event_id_to_check: id });
   
-      if (eventError) throw eventError;
+      if (error) throw error;
+  
+      // The data comes back as a single JSON object, so we parse it here.
+      const eventData = data.event;
+      const participantsData = data.participants || [];
+      const categoriesData = data.categories || [];
+      const betsData = data.bets || [];
   
       setEvent(eventData);
-      setParticipants(eventData.event_participants || []);
-      setCategories(eventData.bet_categories || []);
-  
-      const userBetsMap = (eventData.bets || []).reduce((acc: any, bet: any) => {
+      setParticipants(participantsData.sort((a: EventParticipant, b: EventParticipant) => b.total_points - a.total_points));
+      setCategories(categoriesData.sort((a: BetCategory, b: BetCategory) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
+      
+      // Filter the bets to only show the current user's bets
+      const userBetsMap = betsData.reduce((acc: any, bet: any) => {
         if(bet.user_id === user.id) acc[bet.category_id] = bet;
         return acc;
       }, {});
       setUserBets(userBetsMap);
   
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading event data:', error);
       Alert.alert('Error', 'Failed to load event data');
+      router.back(); // Go back if there's an error (like access denied)
     } finally {
       setLoading(false);
     }
   };
-
+  
   useEffect(() => {
     loadEventData();
   }, [user, id]);
