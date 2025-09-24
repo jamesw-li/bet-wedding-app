@@ -23,46 +23,53 @@ export default function HomeScreen() {
 
   const loadData = async () => {
     if (!user) return;
-
+  
     try {
-      // THE FIX: This query is more secure and avoids recursion.
-      // It fetches the events the user has joined via the event_participants table.
-      const { data: participantEntries, error: eventsError } = await supabase
-        .from('event_participants')
+      // This corrected query fetches events and their participant counts directly and efficiently.
+      const { data: eventsData, error: eventsError } = await supabase
+        .from('events')
         .select(`
-          total_points,
-          events (
-            *,
-            event_participants (
-              count
-            )
-          )
+          *,
+          event_participants(count)
         `)
-        .eq('user_id', user.id);
-
+        .order('created_at', { ascending: false });
+  
       if (eventsError) throw eventsError;
-
-      const processedEvents = participantEntries?.map(entry => {
-        const event = entry.events as any; // Cast to any to handle nested structure
-        return {
-          ...event,
-          participant_count: event.event_participants[0]?.count ?? 0,
-        };
-      }) || [];
-
-      setEvents(processedEvents.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
-
-      const { data: betsData } = await supabase.from('bets').select('points_earned').eq('user_id', user.id);
-      
+  
+      const processedEvents = eventsData?.map(event => ({
+        ...event,
+        participant_count: Array.isArray(event.event_participants) 
+          ? event.event_participants[0]?.count || 0
+          : 0
+      })) || [];
+  
+      setEvents(processedEvents);
+  
+      // Load user stats
+      const { data: betsData } = await supabase
+        .from('bets')
+        .select('points_earned')
+        .eq('user_id', user.id);
+  
+      const { data: participantData } = await supabase
+        .from('event_participants')
+        .select('total_points')
+        .eq('user_id', user.id);
+  
       const totalBets = betsData?.length || 0;
-      const totalPoints = participantEntries?.reduce((sum, p) => sum + p.total_points, 0) || 0;
-
+      const totalPoints = participantData?.reduce((sum, p) => sum + p.total_points, 0) || 0;
+  
       setStats({
         totalEvents: processedEvents.length,
         totalBets,
         totalPoints,
       });
-
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
