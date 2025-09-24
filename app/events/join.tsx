@@ -26,34 +26,28 @@ export default function JoinEventScreen() {
     setLoading(true);
   
     try {
-      const { data: eventData, error: rpcError } = await supabase
-        .rpc('get_event_by_access_code', { access_code_to_check: accessCode.trim().toUpperCase() })
+      // THE FIX: Call the new, single database function to handle the entire join process.
+      const { data, error } = await supabase
+        .rpc('join_event_with_code', { access_code_to_check: accessCode.trim() })
         .single();
   
-      if (rpcError || !eventData) {
+      if (error) throw error;
+  
+      if (!data) {
         Alert.alert('Error', 'Invalid access code. Please check and try again.');
-        setLoading(false);
         return;
       }
+  
+      const { event_id, event_title, already_joined } = data;
+  
+      const message = already_joined
+        ? `You are already a participant in "${event_title}"!`
+        : `You've successfully joined "${event_title}"!`;
       
-      const eventId = eventData.id;
-  
-      // THE FIX: Directly attempt to insert the user as a participant.
-      // The database will automatically handle duplicates.
-      const { error: insertError } = await supabase
-        .from('event_participants')
-        .insert({ event_id: eventId, user_id: user!.id });
-  
-      // A '23505' error code means the user is already in the event, which is not a real error for us.
-      if (insertError && insertError.code !== '23505') {
-        throw insertError; // Throw any other unexpected errors.
-      }
-  
-      // Now that the user is successfully a participant, fetch the event title.
-      const { data: eventDetails } = await supabase.from('events').select('title').eq('id', eventId).single();
-  
-      Alert.alert('Success!', `You've successfully joined "${eventDetails?.title || 'the event'}"!`,
-        [{ text: 'View Event', onPress: () => router.replace(`/events/${eventId}`) }]
+      Alert.alert(
+        already_joined ? 'Already Joined' : 'Success!',
+        message,
+        [{ text: 'View Event', onPress: () => router.replace(`/events/${event_id}`) }]
       );
   
     } catch (error: any) {
