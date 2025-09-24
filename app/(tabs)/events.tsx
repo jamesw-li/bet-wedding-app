@@ -12,6 +12,8 @@ import { Plus, Search, Calendar, Users, Settings } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, Database } from '@/lib/supabase';
+import { Platform } from 'react-native'; // Import Platform
+import { RefreshCw } from 'lucide-react-native'; // Import a refresh icon
 
 type Event = Database['public']['Tables']['events']['Row'];
 
