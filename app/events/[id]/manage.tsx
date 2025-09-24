@@ -30,36 +30,42 @@ export default function ManageEventScreen() {
   const [loading, setLoading] = useState(true);
   const [confirmingSettle, setConfirmingSettle] = useState<{ categoryId: string; option: string } | null>(null);
 
-  const loadEventData = async () => {
-    if (!user || !id) return;
-    try {
-      const { data: eventData, error: eventError } = await supabase.from('events').select('*').eq('id', id).single();
-      if (eventError || eventData.creator_id !== user.id) {
-        Alert.alert('Access Denied', 'You are not the creator of this event.');
-        router.back();
-        return;
-      }
-      setEvent(eventData);
+  // Inside the ManageEventScreen component in app/events/[id]/manage.tsx
 
-      const { data: categoriesData, error: categoriesError } = await supabase.from('bet_categories').select('*').eq('event_id', id).order('created_at', { ascending: true });
-      if (categoriesError) throw categoriesError;
-      setCategories(categoriesData || []);
+const loadEventData = async () => {
+  if (!user || !id) return;
+  setLoading(true);
+  try {
+    // THE FIX: Call the new, secure database function to get all data at once.
+    const { data, error } = await supabase
+      .rpc('get_event_management_data', { event_id_to_check: id });
 
-      const { data: betsData, error: betsError } = await supabase.from('bets').select('*').eq('event_id', id);
-      if (betsError) throw betsError;
-      const betsByCategory = (betsData || []).reduce((acc, bet) => {
-        if (!acc[bet.category_id]) acc[bet.category_id] = [];
-        acc[bet.category_id].push(bet);
-        return acc;
-      }, {} as Record<string, Bet[]>);
-      setAllBets(betsByCategory);
-    } catch (error) {
-      console.error('Error loading event data:', error);
-      Alert.alert('Error', 'Failed to load event data');
-    } finally {
-      setLoading(false);
-    }
-  };
+    if (error) throw error;
+
+    // The data comes back as a single JSON object, so we parse it here.
+    const eventData = data.event;
+    const categoriesData = data.categories || [];
+    const betsData = data.bets || [];
+
+    setEvent(eventData);
+    setCategories(categoriesData.sort((a: BetCategory, b: BetCategory) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
+    
+    // Process bets into a map for easy lookup
+    const betsByCategory = (betsData || []).reduce((acc: any, bet: any) => {
+      if (!acc[bet.category_id]) acc[bet.category_id] = [];
+      acc[bet.category_id].push(bet);
+      return acc;
+    }, {});
+    setAllBets(betsByCategory);
+
+  } catch (error: any) {
+    console.error('Error loading event data:', error);
+    Alert.alert('Error', error.message || 'Failed to load event data');
+    router.back(); // Go back if there's an error (like access denied)
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     loadEventData();
