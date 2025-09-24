@@ -74,14 +74,14 @@ export default function EventDetailScreen() {
       .order('total_points', { ascending: false });
     if (participantsError) throw participantsError;
     setParticipants(participantsData || []);
-
-  } catch (error) {
-    console.error('Error loading event data:', error);
-    Alert.alert('Error', 'Failed to load event data');
-  } finally {
-    setLoading(false);
-  }
-};
+  
+    } catch (error) {
+      console.error('Error loading event data:', error);
+      Alert.alert('Error', 'Failed to load event data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadEventData();
