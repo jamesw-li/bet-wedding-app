@@ -24,8 +24,6 @@ export default function HomeScreen() {
   });
   const [loading, setLoading] = useState(true);
 
-  // Inside the EventsScreen component in app/(tabs)/events.tsx
-
   const loadEvents = async () => {
     if (!user) return;
     try {
