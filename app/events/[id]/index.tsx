@@ -13,6 +13,7 @@ import { ArrowLeft, Users, Calendar, Trophy, Target, Share, Settings } from 'luc
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, Database } from '@/lib/supabase';
+import { Platform } from 'react-native';
 
 type Event = Database['public']['Tables']['events']['Row'];
 type BetCategory = Database['public']['Tables']['bet_categories']['Row'];
@@ -76,20 +77,24 @@ export default function EventDetailScreen() {
   };
 
   const handlePlaceBet = async (categoryId: string, selectedOption: string) => {
-    // ... (rest of the function is the same)
-     if (!user || !event) return;
     try {
-      const existingBet = userBets[categoryId];
-      if (existingBet) {
-        const { error } = await supabase.from('bets').update({ selected_option: selectedOption }).eq('id', existingBet.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('bets').insert([{ user_id: user.id, event_id: event.id, category_id: categoryId, selected_option: selectedOption }]);
-        if (error) throw error;
-      }
+      const { error } = await supabase.rpc('place_bet', {
+        p_category_id: categoryId,
+        p_selected_option: selectedOption,
+      });
+  
+      if (error) throw error;
+      
+      // This part happens on all platforms
       setShowBetModal(false);
       await loadEventData();
-      Alert.alert('Success', 'Your bet has been placed!');
+  
+      // THE FIX: Only show the success alert on mobile platforms.
+      if (Platform.OS !== 'web') {
+        Alert.alert('Success', 'Your bet has been placed!');
+      }
+      // On web, no alert is shown. The UI update is the only confirmation.
+  
     } catch (error: any) {
       console.error('Error placing bet:', error);
       Alert.alert('Error', error.message || 'Failed to place bet');
