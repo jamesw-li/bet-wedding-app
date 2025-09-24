@@ -11,6 +11,7 @@ import { ArrowLeft, Users, Hash } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { Platform } from 'react-native';
 
 export default function JoinEventScreen() {
   const { user } = useAuth();
