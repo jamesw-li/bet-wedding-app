@@ -159,7 +159,11 @@ export default function ManageEventScreen() {
 
       <ScrollView
         style={styles.content}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#D4AF37']} />}
+        refreshControl={
+        Platform.OS === 'web' ? undefined : (
+          <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#D4AF37']} />
+        )
+      }
       >
         <View style={styles.eventCard}>
           <Text style={styles.eventTitle}>{event.title}</Text>
