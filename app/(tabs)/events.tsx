@@ -21,7 +21,7 @@ export default function EventsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'created' | 'joined'>('all');
-
+  
   const loadEvents = async () => {
     if (!user) return;
   
@@ -52,6 +52,28 @@ export default function EventsScreen() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadEvents();
+  }, [user]);
+
+  const onRefresh = async () => {
+    setLoading(true);
+    await loadEvents();
+  };
+
+  const filteredEvents = events.filter(event => {
+    const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    switch (activeTab) {
+      case 'created':
+        return matchesSearch && event.is_creator;
+      case 'joined':
+        return matchesSearch && !event.is_creator;
+      default:
+        return matchesSearch;
+    }
+  });
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
