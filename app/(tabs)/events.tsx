@@ -24,51 +24,23 @@ export default function HomeScreen() {
   });
   const [loading, setLoading] = useState(true);
 
-  const loadData = async () => {
+  // Inside the EventsScreen component in app/(tabs)/events.tsx
+
+  const loadEvents = async () => {
     if (!user) return;
     try {
-      // Step 1: Get the events the user is allowed to see.
-      const { data: eventsData, error: eventsError } = await supabase
-        .from('events')
-        .select('*');
-      if (eventsError) throw eventsError;
-
-      // Step 2: Get the participant counts for those specific events.
-      const eventIds = eventsData.map(e => e.id);
-      const { data: countsData, error: countsError } = await supabase
-        .from('event_participants')
-        .select('event_id, count', { count: 'exact' })
-        .in('event_id', eventIds);
-      if (countsError) throw countsError;
-
-      // Create a map for easy lookup of participant counts
-      const participantCounts = new Map<string, number>();
-      countsData.forEach(item => {
-        participantCounts.set(item.event_id, item.count ?? 0);
-      });
-
-      // Combine the data in the app
+      // THE FIX: Use the same secure database function here as well.
+      const { data: eventsData, error } = await supabase.rpc('get_user_events');
+      if (error) throw error;
+  
       const processedEvents = eventsData.map(event => ({
         ...event,
-        participant_count: participantCounts.get(event.id) || 0,
+        is_creator: event.creator_id === user.id,
       })).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
+  
       setEvents(processedEvents);
-
-      // Load user stats
-      const { count: betsCount } = await supabase.from('bets').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
-      const { data: participantData } = await supabase.from('event_participants').select('total_points').eq('user_id', user.id);
-
-      const totalBets = betsCount || 0;
-      const totalPoints = participantData?.reduce((sum, p) => sum + p.total_points, 0) || 0;
-
-      setStats({
-        totalEvents: processedEvents.length,
-        totalBets,
-        totalPoints,
-      });
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Error loading events:', error);
     } finally {
       setLoading(false);
     }
