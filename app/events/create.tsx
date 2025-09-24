@@ -82,9 +82,9 @@ export default function CreateEventScreen() {
     try {
       // THE FIX: Call the new, secure database function with a single RPC command.
       const { data: newEventId, error } = await supabase.rpc('create_event_and_add_creator', {
-        title: title.trim(),
-        description: description.trim() || null,
-        date: finalDate,
+        p_title: title.trim(),
+        p_description: description.trim() || null,
+        p_date: finalDate,
       });
   
       if (error) throw error;
