@@ -21,30 +21,21 @@ export default function EventsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'created' | 'joined'>('all');
-  
+
   const loadEvents = async () => {
     if (!user) return;
-  
     try {
-      // Use the same corrected query here.
       const { data: eventsData, error } = await supabase
         .from('events')
-        .select(`
-          *,
-          event_participants(count)
-        `)
+        .select(`*, event_participants(count)`)
         .order('created_at', { ascending: false });
-  
       if (error) throw error;
   
       const processedEvents = eventsData?.map(event => ({
         ...event,
-        participant_count: Array.isArray(event.event_participants) 
-          ? event.event_participants[0]?.count || 0
-          : 0,
+        participant_count: Array.isArray(event.event_participants) ? event.event_participants[0]?.count || 0 : 0,
         is_creator: event.creator_id === user.id,
       })) || [];
-  
       setEvents(processedEvents);
     } catch (error) {
       console.error('Error loading events:', error);
