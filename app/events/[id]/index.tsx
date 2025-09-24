@@ -177,6 +177,11 @@ export default function EventDetailScreen() {
           {event.title}
         </Text>
         <View style={styles.headerActions}>
+          {Platform.OS === 'web' && (
+            <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
+              <RefreshCw size={24} color="#6B7280" />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.headerButton} onPress={shareEvent}>
             <Share size={20} color="#6B7280" />
           </TouchableOpacity>
