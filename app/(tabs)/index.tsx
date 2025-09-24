@@ -4,6 +4,8 @@ import { Plus, Calendar, Users, TrendingUp, Trophy } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, Database } from '@/lib/supabase';
+import { Platform } from 'react-native'; // Import Platform
+import { RefreshCw } from 'lucide-react-native'; // Import a refresh icon
 
 type Event = Database['public']['Tables']['events']['Row'];
 
@@ -158,6 +160,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
+    flexDirection: 'row',      
+    justifyContent: 'space-between',
+    alignItems: 'center',   
   },
   welcomeText: {
     fontSize: 28,
@@ -315,5 +320,8 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     marginTop: 8,
+  },
+  refreshButton: {
+    padding: 8,
   },
 });
