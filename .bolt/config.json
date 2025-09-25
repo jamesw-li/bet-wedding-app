@@ -1,3 +1,9 @@
 {
-  "template": "bolt-expo"
+  "template": "bolt-expo",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
